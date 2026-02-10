@@ -268,7 +268,7 @@ const AskAlex = () => {
 
         {isBot && item.id === typingMessageId && isLoading ? (
           <Text style={{ fontSize: 14, fontWeight: '700', color: '#000', fontStyle: 'italic' }}>
-            Alex Typing Please Wait {loadingDots}
+            is typing {loadingDots}
           </Text>
         ) : (
           <Text style={styles.messageText}>
