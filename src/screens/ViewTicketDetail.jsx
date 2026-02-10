@@ -264,6 +264,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginVertical: 4,
     borderRadius: 8,
+    maxWidth:'90%',
   },
   incoming: {
     backgroundColor: '#FFEA00',
