@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,345 +10,324 @@ import {
   StatusBar
 } from 'react-native';
 
-import articles from '../../assets/articles.json';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const defaultMessages = [
   {
     id: '1',
     sender: 'bot',
-    text: "Hello! Welcome to SYIL Support. I'm Alexa, your AI assistant 🙂"
-  },
-  {
-    id: '2',
-    sender: 'bot',
-    text: "Is your question about the machine currently registered to your account?"
+    text: `Hello! Welcome to SYIL Support. I'm Alex, your AI assistant 🙂.\n\nHow are you today? How may I assist you?`
   }
 ];
 
-const cleanHTML = (text = '') => {
-  return text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>|<p>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-};
 
-const findAnswerFromArticles = (question) => {
-  const q = question.toLowerCase().trim();
-  const words = q.split(/\s+/);
 
-  let matchedArticle = null;
-
-  // 1️⃣ CATEGORY MATCH (TOP PRIORITY)
-  matchedArticle = articles.find(article => {
-    const category = article["Category"]?.toLowerCase() || '';
-    return words.some(word => category.includes(word));
+const renderFormattedText = (text, isTyping = false) => {
+  if (!text) return null;
+  if (isTyping) {
+    return <Text style={{ height: 0 }} />;
+  }
+  const lines = text.split('\n');
+  const bulletIndices = lines
+    .map((line, idx) => (line.trim().startsWith('- ') ? idx : -1))
+    .filter(idx => idx !== -1);
+  const bulletGroupStarts = [];
+  bulletIndices.forEach((idx, i) => {
+    if (i === 0 || idx !== bulletIndices[i - 1] + 1) {
+      bulletGroupStarts.push(idx);
+    }
+  });
+  const boldIndices = new Set();
+  bulletGroupStarts.forEach(bulletStartIdx => {
+    for (let i = bulletStartIdx - 1; i >= 0; i--) {
+      if (lines[i].trim() !== '') {
+        boldIndices.add(i);
+        break;
+      }
+    }
   });
 
-  // 2️⃣ SUBCATEGORY MATCH
-  if (!matchedArticle) {
-    matchedArticle = articles.find(article => {
-      const sub = article["Subcategory"]?.toLowerCase() || '';
-      return words.some(word => sub.includes(word));
-    });
-  }
+  
 
-  // 3️⃣ TITLE MATCH
-  if (!matchedArticle) {
-    matchedArticle = articles.find(article => {
-      const title = article["Article title"]?.toLowerCase() || '';
-      return words.some(word => title.includes(word));
-    });
-  }
+  return lines.map((line, index) => {
+    const trimmed = line.trim();
+    const isLastLine = index === lines.length - 1;
+    const suffix = isLastLine ? '' : '\n';
 
-  // 4️⃣ BODY MATCH (LAST)
-  if (!matchedArticle) {
-    matchedArticle = articles.find(article => {
-      const body = article["Article body"]?.toLowerCase() || '';
-      return words.some(word => body.includes(word));
-    });
-  }
+    if (index === 0 && trimmed.startsWith('📘')) {
+      return (
+        <Text key={index} style={{ fontWeight: '700' }}>
+          {line + suffix}
+        </Text>
+      );
+    }
 
-  // ❌ Nothing found
-  if (!matchedArticle) {
-    return "Sorry, I couldn't find an answer related to this. Please try rephrasing your question.";
-  }
+    if (boldIndices.has(index)) {
+      return (
+        <Text key={index} style={{ fontWeight: '700', color: '#000' }}>
+          {line + suffix}
+        </Text>
+      );
+    }
 
-  // ✅ Build final response
-  const title = matchedArticle["Article title"] || 'N/A';
-  const category = matchedArticle["Category"] || 'N/A';
-  const subcategory = matchedArticle["Subcategory"] || 'N/A';
-  const body = cleanHTML(matchedArticle["Article body"] || '');
+    if (trimmed.startsWith('- ')) {
+      return (
+        <Text key={index} style={{ fontWeight: '400', color: '#000' }}>
+          {line + suffix}
+        </Text>
+      );
+    }
 
-  return (
-    `📘 Title: ${title}\n\n` +
-    `📂 Category: ${category}\n` +
-    `📁 Subcategory: ${subcategory}\n\n` +
-    `📝 Details:\n${body.substring(0, 1200)}...`
-  );
+    // Normal lines
+    return (
+      <Text key={index} style={{ fontWeight: '400', color: '#000' }}>
+        {line + suffix}
+      </Text>
+    );
+  });
 };
+
+
 
 const AskAlex = () => {
 
-    const navigation = useNavigation();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
 
-    const route = useRoute();
-    const currentRoute = route.name;  
+  useFocusEffect(
+        useCallback(() => {
+            const loadUserName = async () => {
+            const userFirstName = await AsyncStorage.getItem('userFirstName');
+            const userLastName = await AsyncStorage.getItem('userLastName');
 
+            console.log('FOCUS firstName:', userFirstName);
+            console.log('FOCUS lastName:', userLastName);
+
+            setFirstName(userFirstName || '');
+            setLastName(userLastName || '');
+            };
+
+            loadUserName();
+        }, [])
+    );
+
+    const getInitials = (firstName = '', lastName = '') => {
+        const f = firstName?.charAt(0)?.toUpperCase() || '';
+        const l = lastName?.charAt(0)?.toUpperCase() || '';
+        return `${f}${l}`;
+    };
+
+
+  const navigation = useNavigation();
+  const route = useRoute();
+  //const currentRoute = route.name;
+  const flatListRef = useRef(null);
 
   const [messages, setMessages] = useState(defaultMessages);
   const [input, setInput] = useState('');
 
-  // const sendMessage = () => {
-  //   if (!input.trim()) return;
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingDots, setLoadingDots] = useState('');
+  const [typingMessageId, setTypingMessageId] = useState(null);
 
-  //   const userMessage = {
-  //     id: Date.now().toString(),
-  //     sender: 'user',
-  //     text: input
-  //   };
+  const removeMarkdownLinks = (text) => {
+  let cleaned = text.replace(/\[.*?\]\(.*?\)/g, '');
+  cleaned = cleaned.replace(/\([^()]*https?:\/\/[^()]*\)/g, '');
+  cleaned = cleaned.replace(/\(\s*\)/g, '');
+  cleaned = cleaned.trim();
 
-  //   let botText = '';
+  return cleaned;
+};
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingDots('');
+      return;
+    }
 
-  //   const greetings = [
-  //     /hello alex/i, /hi alex/i, /hey alex/i, /hello/i, /hi/i, /hye/i, /good morning/i , /good afternoon/i, /good night/i, /good evening/i,
-  //     /good morning alex/i, /good afternoon alex/i, /good night alex/i, /good evening alex/i
-  //   ];
+    const dotsArray = ['.', '..', '...'];
+    let index = 0;
 
-  //   const smallTalk = [
-  //     /how are you alex/i,
-  //     /how are you/i,
-  //     /what are you doing alex/i,
-  //     /what are you doing/i,
-  //     /tell me a joke alex/i,
-  //     /tell me a joke/i,
-  //     /can you help me alex/i,
-  //     /can you help me/i,
-  //     /what can you do alex/i,
-  //     /what can you do/i
-  //   ];
+    const interval = setInterval(() => {
+      setLoadingDots(dotsArray[index]);
+      index = (index + 1) % dotsArray.length;
+    }, 500);
 
-  //   if (greetings.some(p => p.test(input))) {
-  //     botText = "Hello! Welcome to SYIL Support. I'm Alexa, your AI assistant 🙂\n \nIs your question about the machine currently registered to your account?";
-  //   } else if (smallTalk.some(p => p.test(input))) {
-  //     botText = "I'm here to assist you with any SYIL machine or support-related question 😄 How can I help you today?";
-  //   } else {
-  //     // Article-based answer
-  //     botText = findAnswerFromArticles(input);
-  //   }
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
-  //   const botMessage = {
-  //     id: (Date.now() + 1).toString(),
-  //     sender: 'bot',
-  //     text: botText
-  //   };
+  const sendMessage = async () => {
+    if (!input.trim()) return;
 
-  //   setMessages(prev => [...prev, userMessage, botMessage]);
-  //   setInput('');
-  // };
+    const userText = input;
 
-  const sendMessage = () => {
-  if (!input.trim()) return;
+    const userId = Date.now().toString();
+    const botId = (Date.now() + 1).toString();
 
-  const userMessage = {
-    id: Date.now().toString(),
-    sender: 'user',
-    text: input
+    setMessages(prev => [
+      ...prev,
+      { id: userId, sender: 'user', text: userText, firstName: firstName, lastName: lastName },
+      { id: botId, sender: 'bot', text: '' }
+    ]);
+
+    setInput('');
+    setIsLoading(true);
+    setTypingMessageId(botId);
+
+    try {
+      const response = await fetch('https://syilapp.onrender.com/ask-alex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: userText }),
+      });
+
+      const result = await response.json();
+      console.log('SERVER RESPONSE:', result);
+      setIsLoading(false);
+
+      const finalText =
+        (result.title ? `📘 ${result.title}\n\n` : '') +
+        (result.text || '');
+
+      const cleanedFinalText = removeMarkdownLinks(finalText);
+
+      let index = 0;
+      let temp = '';
+
+      const interval = setInterval(() => {
+        temp += cleanedFinalText[index];
+        index++;
+
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === botId
+              ? { ...msg, text: temp }
+              : msg
+          )
+        );
+
+        if (index >= cleanedFinalText.length) {
+          clearInterval(interval);
+          setIsLoading(false);
+        }
+      }, 10);
+
+    } catch (error) {
+      console.log('FETCH ERROR:', error);
+
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === botId
+            ? { ...msg, text: '❌ Network error. Please try again.' }
+            : msg
+        )
+      );
+
+      setIsLoading(false);
+    }
   };
 
-  setMessages(prev => [...prev, userMessage]);
-  setInput('');
-
-  let botText = '';
-
-  // Greetings and small talk
-  const greetings = [/hello alex/i, /hi alex/i, /hey alex/i, /hello/i, /hi/i, /hye/i, /good morning/i , /good afternoon/i, /good night/i, /good evening/i,/good morning alex/i, /good afternoon alex/i, /good night alex/i, /good evening alex/i];
-  const smallTalk = [/how are you alex/i, /how are you/i, /what are you doing alex/i, /what are you doing/i, /tell me a joke alex/i, /tell me a joke/i, /can you help me alex/i, /can you help me/i, /what can you do alex/i, /what can you do/i];
-
-  if (greetings.some(p => p.test(input))) {
-    botText = "Hello! Welcome to SYIL Support. I'm Alexa, your AI assistant 🙂\nIs your question about the machine currently registered to your account?";
-  } else if (smallTalk.some(p => p.test(input))) {
-    botText = "I'm here to assist you with any SYIL machine or support-related question 😄 How can I help you today?";
-  } else {
-    botText = findAnswerFromArticles(input);
-  }
-
-  // Typing effect
-  const botMessageId = (Date.now() + 1).toString();
-  let index = 0;
-  let displayedText = '';
-
-  // Add empty bot message first
-  setMessages(prev => [...prev, { id: botMessageId, sender: 'bot', text: '' }]);
-
-  const typingInterval = setInterval(() => {
-    displayedText += botText[index];
-    index++;
-
-    // Update the last bot message
-    setMessages(prev => prev.map(msg =>
-      msg.id === botMessageId ? { ...msg, text: displayedText } : msg
-    ));
-
-    // Stop when finished
-    if (index === botText.length) {
-      clearInterval(typingInterval);
-    }
-  }, 10); // 50ms per character (~speed, adjust as needed)
-};
-
-  const renderItem = ({ item }) => (
-    <View
-      style={[
-        styles.messageBubble,
-        item.sender === 'user'
-          ? styles.userBubble
-          : styles.botBubble
-      ]}
-    >
-      <Text style={styles.messageText}>{item.text}</Text>
-    </View>
-  );
+  const renderItem = ({ item }) => {
+  const isBot = item.sender === 'bot';
+  const isUser = item.sender === 'user';
+  const name = item.firstName;
+  
 
   return (
+    <View style={styles.mainContent}>
+      {isBot && (
+        <View style={styles.loadingIndicator}>
+          <Image
+            source={require('../../images/Alexa.png')} 
+            style={styles.loadingIcon}
+          />
+          <Text style={styles.alexaText}>Alex</Text>
+        </View>
+      )}
 
-    <SafeAreaView style={styles.safeArea}>
-          {/* ---------- Header ---------- */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Image
-                source={require('../../images/right_arrow.png')}
-                style={styles.arrowIcon}
-              />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Ask Alex</Text>
+
+        {isUser && (
+          <View style={styles.loadingIndicatorUser}>
+            <View style={styles.initialsAvatar}>
+                <Text style={styles.initialsText}>
+                {getInitials(firstName, lastName)}
+                </Text>
+            </View>
+              <Text style={styles.alexaText}>{firstName}</Text>
           </View>
+        )}
 
+        <View
+          style={[
+            styles.messageBubble, isBot && isLoading && styles.messageDisable,
+            isBot ? styles.botBubble : styles.userBubble
+          ]}
+        >
 
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-
-      {/* Chat Messages */}
-      <FlatList
-        data={messages}
-        renderItem={renderItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.chatContainer}
-      />
-
-      {/* Input Box */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholder="Type your message..."
-          value={input}
-          onChangeText={setInput}
-          placeholderTextColor="#999"
-          style={styles.input}
-        />
-        <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-          <Text style={styles.sendText}>➤</Text>
-        </TouchableOpacity>
+        {isBot && item.id === typingMessageId && isLoading ? (
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#000', fontStyle: 'italic' }}>
+            Alex Typing Please Wait {loadingDots}
+          </Text>
+        ) : (
+          <Text style={styles.messageText}>
+            {renderFormattedText(item.text)}
+          </Text>
+        )}
       </View>
     </View>
+  );
+};
 
-
-      <View style={styles.footer}>
-          <TouchableOpacity style={[
-              styles.footerItem,
-              currentRoute === 'Home' && styles.activeFooterItem,
-          ]} 
-          onPress={() => navigation.navigate('Home')}
-          >
-          <Image source={require('../../images/home.png')} style={[
-              styles.footerIcon,
-              currentRoute === 'Home' && styles.activeFooterIcon,
-              ]} />
-          <Text style={[
-              styles.footerText,
-              currentRoute === 'Home' && styles.activeFooterText,
-              ]}>Home</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-          style={[
-              styles.footerItem,
-              currentRoute === 'KnowledgeBase' && styles.activeFooterItem,
-          ]}
-          onPress={() => navigation.navigate('KnowledgeBase')}
-          >
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <Image
-              source={require('../../images/knowledge.png')}
-              style={[
-              styles.footerIcon,
-              currentRoute === 'KnowledgeBase' && styles.activeFooterIcon,
-              ]}
+            source={require('../../images/right_arrow.png')}
+            style={styles.arrowIcon}
           />
-          <Text
-              style={[
-              styles.footerText,
-              currentRoute === 'KnowledgeBase' && styles.activeFooterText,
-              ]}
-          >
-              Knowledge
-          </Text>
-          </TouchableOpacity>
-
-
-          <TouchableOpacity style={[
-              styles.footerItem,
-              currentRoute === 'Ticket' && styles.activeFooterItem,
-          ]}
-          onPress={() => navigation.navigate('Ticket')}
-          >
-          <Image source={require('../../images/submit.png')} style={[
-              styles.footerIcon,
-              currentRoute === 'Ticket' && styles.activeFooterIcon,
-              ]} />
-          <Text style={[
-              styles.footerText,
-              currentRoute === 'Ticket' && styles.activeFooterText,
-              ]}>Submit Ticket</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[
-              styles.footerItem,
-              currentRoute === 'ViewTicket' && styles.activeFooterItem,
-          ]} 
-          onPress={() => navigation.navigate('ViewTicket')}
-          >
-          <Image source={require('../../images/view.png')} style={[
-              styles.footerIcon,
-              currentRoute === 'ViewTicket' && styles.activeFooterIcon,
-              ]} />
-          <Text style={[
-              styles.footerText,
-              currentRoute === 'ViewTicket' && styles.activeFooterText,
-              ]}>View Tickets</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[
-              styles.footerItem,
-              currentRoute === 'More' && styles.activeFooterItem,
-          ]} onPress={() => navigation.navigate('More')}> 
-          <Image source={require('../../images/more.png')} style={[
-              styles.footerIcon,
-              currentRoute === 'More' && styles.activeFooterIcon,
-              ]} />
-          <Text style={[
-              styles.footerText,
-              currentRoute === 'More' && styles.activeFooterText,
-              ]}>More</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Ask Alex</Text>
       </View>
 
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
+        <FlatList
+          ref={flatListRef}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          data={messages}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.chatContainer}
+          ListFooterComponent={<View style={{ height: 20 }} />}
+        />
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            placeholder="Type your message..."
+            value={input}
+            onChangeText={setInput}
+            placeholderTextColor="#999"
+            multiline={true}
+            style={[
+              styles.input,
+              isLoading && styles.inputDisabled,
+              { minHeight: 44, textAlignVertical: 'top' }
+            ]}
+            editable={!isLoading}
+          />
+          <TouchableOpacity style={[
+            styles.sendButton,
+            isLoading && styles.inputDisabled
+          ]} disabled={isLoading} onPress={sendMessage}>
+            <Text style={styles.sendText}>➤</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -357,10 +336,10 @@ export default AskAlex;
 
 // 🎨 Styles
 const styles = StyleSheet.create({
-    safeArea: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingBottom:110,
+    paddingBottom: 0,
   },
   header: {
     height: 45,
@@ -386,12 +365,14 @@ const styles = StyleSheet.create({
     padding: 16
   },
   messageBubble: {
-    maxWidth: '75%',
+    maxWidth: '90%',
     padding: 12,
     borderRadius: 12,
     marginVertical: 6
   },
+  
   botBubble: {
+    adding: 12,
     alignSelf: 'flex-start',
     backgroundColor: '#F2F2F2'
   },
@@ -401,21 +382,49 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: 14,
-    color: '#000'
+    color: '#000',
+    lineHeight:18,
   },
   inputContainer: {
     flexDirection: 'row',
     padding: 12,
     borderTopWidth: 1,
     borderColor: '#eee',
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  loadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 0,
+  },
+  loadingIndicatorUser:{
+    justifyContent:'flex-end',
+    alignContent:'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 0,
+  },
+  initialsAvatar:{width:30,height:30,backgroundColor:'#000',borderRadius:100,justifyContent:'center',alignItems:'center',},
+  initialsText:{fontSize:14,fontWeight:500,color:'#FFEA00'},
+  alexaText:{marginLeft:5,fontSize:16,fontWeight:700,},
+  loadingIcon: {
+    width: 32,
+    height: 32,
+  },
+  loadingDots: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 6,
+    color: '#666',
   },
   input: {
     flex: 1,
     backgroundColor: '#F2F2F2',
     borderRadius: 8,
     paddingHorizontal: 12,
-    height: 44
+    height: 100,
+    textAlignVertical: 'top'
   },
   sendButton: {
     marginLeft: 10,
@@ -423,51 +432,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    height: 100,
+  },
+  inputDisabled:{
+    opacity:0.5,
   },
   sendText: {
     fontSize: 18,
     fontWeight: 'bold'
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    //height: 80,
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingHorizontal:16,
-    boxShadow:'0 0 5px 0px #dfdfdf'
-  },
-  footerItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical:16,
-    paddingBottom:25,
-  },
-  footerIcon: {
-    width: 22,
-    height: 22,
-    marginBottom: 4,
-    tintColor: '#666666',
-  },
-  footerText: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  activeFooterItem:{
-    boxShadow:'0px -2px 0px 0px #FFEA00'
-  },
-  activeFooterIcon:{
-    tintColor: '#000',
-  },
-  activeFooterText:{
-    color:'#000',
-    fontWeight:500,
-  },
+
 });

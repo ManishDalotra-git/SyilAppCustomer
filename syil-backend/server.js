@@ -19,10 +19,154 @@ const hubspotUpload = multer({
 });
 
 const HUBSPOT_API_KEY = process.env.HUBSPOT_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 console.log('api--- ', HUBSPOT_API_KEY);
 
 
 
+
+
+app.post('/ask-alex', async (req, res) => {
+  const { question } = req.body;
+  console.log('question---- ', question);
+  try {
+    // const { question } = req.body;
+     console.log('question----try00 ', question);
+    if (!question) {
+      return res.status(400).json({ error: 'Question is required' });
+    }
+
+    const response = await axios.post(
+      'https://api.openai.com/v1/responses',
+      {
+        model: 'gpt-5-mini',
+        tools: [{ type: 'web_search' }],
+        input: [
+          {
+            role: 'system',
+            content:`
+You are "Alex", a professional AI support assistant for SYIL.
+
+========================
+CORE KNOWLEDGE RULES
+========================
+- Answer ONLY using information available on:
+  • https://syil.com
+  • https://syil.com/dealer-portal
+- Do NOT use external knowledge, assumptions, or general CNC information.
+- If requested information is not available on the official SYIL websites, say so clearly and politely.
+
+========================
+GREETING & SMALL TALK
+========================
+- If the user says "hi", "hello", "hey":
+  Respond:
+  "Hello! Welcome to SYIL Support. I'm Alex, your AI assistant 🙂.\n\nHow are you today? How may I assist you?"
+
+- If the user asks "how are you", "how are you doing":
+  Respond professionally and friendly:
+  "I'm doing well, thank you for asking. How are you today? How may I assist you?"
+
+- Do NOT include key features, machines, or product details in greeting or small talk responses.
+
+========================
+SYIL / MACHINE / PRODUCT QUESTIONS
+========================
+- ONLY when the user asks about:
+  • SYIL as a company
+  • CNC machines
+  • Specific models (X5, X7, X9, X11, L-series, G2, R1, etc.)
+  • Capabilities, specifications, or use cases
+- Then:
+  - Provide a clear, accurate, and professional response.
+  - Include a clearly labeled **"Key Features"** section in bullet points.
+  - Ensure every feature is sourced from official SYIL website content.
+  - Do not exaggerate or add marketing claims.
+
+========================
+DEALER PORTAL & RESTRICTED INFO
+========================
+- If the user asks about:
+  • Pricing
+  • Dealer access
+  • Private documents
+  • Restricted resources
+- Respond that this information is available through authorized dealers only.
+- Guide the user to the SYIL Dealer Portal.
+- Never guess or invent confidential information.
+
+========================
+CLARIFICATION RULE
+========================
+- If the user's question is unclear or incomplete, ask ONE short clarification question before answering.
+
+========================
+TONE & STYLE
+========================
+- Professional, polite, and friendly.
+- Clear and structured responses.
+- Use bullet points for features.
+- Avoid unnecessary verbosity or casual slang.
+
+========================
+FALLBACK RULE
+========================
+- If the question is unrelated to SYIL or not covered on the official websites:
+  Respond:
+  "This information is not available on the official SYIL website. Please contact SYIL support or an authorized dealer for further assistance."
+`
+              // "Answer only from the provided 'https://syil.com/dealer-portal' and 'https://syil.com' website content. if someone ask hi alex how are you then alex said Hello! Welcome to SYIL Support. I'm Alex, your AI assistant 🙂 in professional way Also provide key features for every question."
+          },
+          {
+            role: 'user',
+            content: question
+          }
+        ],
+        text: {
+          format: { type: 'text' }
+        }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY}`
+        }
+      }
+    );
+
+    // 🔹 Extract message block
+    const messageBlock = response.data.output.find(
+      o => o.type === 'message'
+    );
+
+    const content = messageBlock?.content?.[0] || {};
+    const text = content.text || '';
+    const annotations = content.annotations || [];
+
+    // 🔹 Only FIRST title
+    const title =
+      annotations.length > 0 && annotations[0].title
+        ? annotations[0].title
+        : '';
+
+
+        console.log('content---- ', content);
+        console.log('text---- ', text);
+        console.log('annotations---- ', annotations);
+        console.log('title---- ', title);
+
+    return res.json({
+      title,
+      text
+    });
+
+  } catch (error) {
+    console.error('OpenAI Error:', error.response?.data || error.message);
+    return res.status(500).json({
+      error: 'Failed to fetch answer from OpenAI'
+    });
+  }
+});
 
 
 
@@ -1109,6 +1253,8 @@ app.post('/get_ticket_conversation', async (req, res) => {
   }
 });
 
+
+app.listen(PORT,'0.0.0.0', () => console.log(`Server running on http://localhost:${PORT}`));
 
 
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));

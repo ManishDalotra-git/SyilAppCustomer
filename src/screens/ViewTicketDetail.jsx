@@ -68,8 +68,6 @@ const ViewTicketDetail = ({ navigation }) => {
           );
 
           const data = await response.json();
-
-          // Messages ko latest top par show karne ke liye inverted FlatList ka use hoga
           setMessages(data.messages || []);
           setLoading(false);
         } catch (error) {
@@ -130,7 +128,9 @@ const ViewTicketDetail = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
             keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
             style={{ flex: 1,paddingBottom:0, }}
-            contentContainerStyle={{ paddingBottom: 100, paddingTop:0,justifyContent:'flex-start',  flexDirection:'column-reverse',alignContent:'flex-end' }}
+            contentContainerStyle={{ paddingBottom: 100, paddingTop:0,  flexDirection:'column-reverse',
+              // alignItems:'flex-end',
+               }}
             // style={{ flex: 1, backgroundColor:'red',  }}
             renderItem={({ item }) => (
               <View
@@ -266,12 +266,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   incoming: {
-    backgroundColor: '#e5e5e5',
-    alignSelf: 'flex-start',
-  },
-  outgoing: {
     backgroundColor: '#FFEA00',
     alignSelf: 'flex-end',
+  },
+  outgoing: {
+    backgroundColor: '#e5e5e5',
+    alignSelf: 'flex-start',
   },
   senderName: { fontWeight: '600', marginBottom: 4, color: '#333' },
   messageText: { color: '#000' },
