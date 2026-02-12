@@ -17,7 +17,7 @@ const Home = () => {
   return (
     <ImageBackground source={require('../../images/Login_System.png')}  style={styles.background}
       resizeMode="cover">
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
       <View>
         <Image source={require('../../images/syil_logo_white.png')} style={styles.logo} />
       </View>
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'android' ? 60 : 20,
-    paddingBottom: 30,
+    paddingBottom: 150,
   },
   heightAuto:{
     alignItems: 'center',
