@@ -1240,6 +1240,8 @@ app.post('/get_ticket_conversation', async (req, res) => {
           text: m.text || '',
           richText: m.richText || '',
           createdAt: m.createdAt,
+          subject : m.subject,
+          attachments: m.attachments,
         };
       });
 

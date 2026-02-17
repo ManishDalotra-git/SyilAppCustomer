@@ -10,6 +10,8 @@ import {
   Platform,
   Pressable,
   FlatList,
+  Linking,
+  RefreshControl ,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,6 +33,8 @@ const ViewTicketDetail = ({ navigation }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
+
+  const [refreshing, setRefreshing] = useState(false);
 
   /* ================= USER INFO ================= */
   useFocusEffect(
@@ -81,6 +85,38 @@ const ViewTicketDetail = ({ navigation }) => {
     }, [ticketId])
   );
 
+  const onRefresh = useCallback(async () => {
+  setRefreshing(true);
+  try {
+    if (!ticketId) return;
+
+    const response = await fetch(
+      'https://syilapp.onrender.com/get_ticket_conversation',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticketId }),
+      }
+    );
+
+    const data = await response.json();
+    setMessages(data.messages || []);
+  } catch (error) {
+    console.log('Refresh error', error);
+  } finally {
+    setRefreshing(false);
+  }
+}, [ticketId]);
+
+  console.log('messages---- ' , messages);
+
+  const initialMessage = messages[messages.length - 1];
+  const dynamicSubject = initialMessage?.subject;
+  const outgoingMessage = messages.find(msg => msg.direction === 'OUTGOING');
+  const dynamicEmail = outgoingMessage?.senderName;
+  console.log('dynamicSubject---- ', dynamicSubject);
+  console.log('dynamicEmail---- ', dynamicEmail);
+
   const getSenderName = (item) => item?.senderName || email;
 
   const getInitials = (firstName = '', lastName = '') => {
@@ -117,7 +153,25 @@ const ViewTicketDetail = ({ navigation }) => {
 
         {/* MESSAGES */}
         <View style={{ flex: 1 }}>
-          
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#FFEA00',
+              padding: 5,
+              paddingHorizontal:10,
+              borderRadius: 8,
+              marginBottom: 10,
+              alignSelf: 'flex-end',
+              display:'flex',
+              flexDirection:'row',
+              alignItems:'center',
+            }}
+            onPress={onRefresh}
+          >
+            <Image
+              source={require('../../images/refresh.png')}
+              style={styles.refreshIcon}
+            /><Text style={{ color: '#000000', fontWeight: '500' }}>Refresh</Text>
+          </TouchableOpacity>
           <Text style={styles.subject}>{subject}</Text>
           <Text style={styles.ticket}>#{ticketId}</Text>
 
@@ -127,11 +181,8 @@ const ViewTicketDetail = ({ navigation }) => {
             data={messages}
             showsVerticalScrollIndicator={false}
             keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-            style={{ flex: 1,paddingBottom:0, }}
-            contentContainerStyle={{ paddingBottom: 100, paddingTop:0,  flexDirection:'column-reverse',
-              // alignItems:'flex-end',
-               }}
-            // style={{ flex: 1, backgroundColor:'red',  }}
+            style={{ flex: 1, paddingBottom: 0 }}
+            contentContainerStyle={{ paddingBottom: 100, paddingTop: 0, flexDirection: 'column-reverse' }}
             renderItem={({ item }) => (
               <View
                 style={[
@@ -141,20 +192,64 @@ const ViewTicketDetail = ({ navigation }) => {
                     : styles.incoming,
                 ]}
               >
-                <Text style={styles.senderName}>
-                  {getSenderName(item)}
-                </Text>
+                <Text style={styles.senderName}>{getSenderName(item)}</Text>
                 <Text style={styles.messageText}>{item.text || ''}</Text>
+
+                 {/* Attachments */}
+                  {/* <Text >{item.attachments}</Text> */}
+                
+
+                {item.attachments && item.attachments.length > 0 && (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 5,  }}>
+                    {item.attachments.map((attachment, index) => (
+                      <Image
+                        key={index}
+                        source={{ uri: attachment.url }}
+                        style={styles.attachmentImage}
+                      />
+                      // <Text>{attachment.url}</Text>
+                    ))}
+                  </View>
+                )}
+
               </View>
             )}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
           />
+
+          
           
 
           {!loading && messages.length === 0 && (
             <Text style={styles.noTicketText}>No conversation found</Text>
           )}
+
+          {messages.length != 0 && (
+          <Text style={styles.ReplyStyle} 
+            onPress={() =>
+              Linking.openURL(
+                `mailto:${dynamicEmail}?subject=Re:%20${encodeURIComponent(dynamicSubject)}&body=${encodeURIComponent("Hello Support SYIL,")}`
+              )
+            }
+           >
+            <Text style={styles.support}>Reply to Support Team</Text>
+          </Text>
+
+          
+          )}
+
+          
+
+          
         </View>
+
       </View>
+
+      
+
+      
 
       {/* FOOTER */}
       <View style={styles.footer}>
@@ -307,4 +402,25 @@ const styles = StyleSheet.create({
   activeFooterItem: { borderTopWidth: 2, borderTopColor: '#FFEA00' },
   activeFooterIcon: { tintColor: '#000' },
   activeFooterText: { color: '#000', fontWeight: '500' },
+
+  ReplyStyle:{
+    backgroundColor:'#000',
+    padding:20,
+    marginBottom:110,
+    color:'#fff',
+    borderRadius:8,
+    textAlign:'center'
+  },
+  refreshIcon:{
+    width:15,
+    height:16,
+    marginRight:5,
+  },
+  attachmentImage:{
+    width:'85%',
+    height:200,
+    objectFit:'contain',
+    resizeMode: 'contain',
+  },
+
 });
