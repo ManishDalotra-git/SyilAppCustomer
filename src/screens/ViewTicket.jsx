@@ -288,7 +288,8 @@ const ViewTicket = ({ navigation }) => {
                     showsVerticalScrollIndicator={false}
                     keyExtractor={(item) => item.ticketId}
                     //contentContainerStyle={{ paddingBottom: 200, }}
-                    ListFooterComponent={<View style={{ height: 290 }} />}
+                    contentContainerStyle={{ paddingBottom: 300, paddingTop: 0, flexDirection: 'column-reverse',}}
+                    //ListFooterComponent={<View style={{ height: 290 }} />}
                     renderItem={({ item }) => (
                     <Pressable
                         onPress={() =>
