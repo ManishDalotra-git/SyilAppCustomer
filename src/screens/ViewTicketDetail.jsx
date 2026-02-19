@@ -113,6 +113,7 @@ const ViewTicketDetail = ({ navigation }) => {
   const initialMessage = messages[messages.length - 1];
   const dynamicSubject = initialMessage?.subject;
   const outgoingMessage = messages.find(msg => msg.direction === 'OUTGOING');
+  const hasOutgoing = messages.some(msg => msg.direction === 'OUTGOING');
   const dynamicEmail = outgoingMessage?.senderName;
   console.log('dynamicSubject---- ', dynamicSubject);
   console.log('dynamicEmail---- ', dynamicEmail);
@@ -226,19 +227,22 @@ const ViewTicketDetail = ({ navigation }) => {
             <Text style={styles.noTicketText}>No conversation found</Text>
           )}
 
-          {messages.length != 0 && (
-          <Text style={styles.ReplyStyle} 
-            onPress={() =>
-              Linking.openURL(
-                `mailto:${dynamicEmail}?subject=Re:%20${encodeURIComponent(dynamicSubject)}&body=${encodeURIComponent("Hello Support SYIL,")}`
-              )
-            }
-           >
-            <Text style={styles.support}>Reply to Support Team</Text>
-          </Text>
-
-          
-          )}
+          {messages.length === 1 ? (
+            <Text style={[styles.ReplyStyle, { backgroundColor: '#999' }]}>
+              Please wait for the support reply.
+            </Text>
+          ) : hasOutgoing ? (
+            <Text
+              style={styles.ReplyStyle}
+              onPress={() =>
+                Linking.openURL(
+                  `mailto:${dynamicEmail}?subject=Re:%20${encodeURIComponent(dynamicSubject)}&body=${encodeURIComponent("Hello Support SYIL,")}`
+                )
+              }
+            >
+              Reply to Support Team
+            </Text>
+          ) : null}
 
           
 
