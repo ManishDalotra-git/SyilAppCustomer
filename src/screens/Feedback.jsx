@@ -7,7 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  StatusBar,
+  StatusBar,KeyboardAvoidingView,Platform,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -53,7 +53,7 @@ const Feedback = () => {
     try {
       setLoading(true);
 
-      const response = await fetch('https://syilapp.onrender.com/submit-feedback', {
+      const response = await fetch('https://syilapp-w8ye.onrender.com/submit-feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subject, message, rating, email }),
@@ -96,16 +96,21 @@ const Feedback = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       {/* ---------- Header ---------- */}
+      <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // adjust if you have headers
+                  >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Image
-            source={require('../../images/right_arrow.png')}
+            source={require('../../images/circle_arrow.png')}
             style={styles.arrowIcon}
           />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Feedback</Text>
       </View>
-
+      
       <ScrollView contentContainerStyle={styles.container}>
         {/* ---------- Subject ---------- */}
         <View style={[styles.input, errors.subject && styles.errorInput, { padding: 0 }]}>
@@ -271,7 +276,7 @@ const Feedback = () => {
             ]}>More</Text>
         </TouchableOpacity>
       </View>
-
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -291,14 +296,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   arrowIcon: {
-    width: 11.86,
-    height: 21.21,
+    width: 32,
+    height: 32,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
     textAlign: 'center',
-    width: '94%',
+    width: '85%',
   },
   container: {
     flexGrow: 1,

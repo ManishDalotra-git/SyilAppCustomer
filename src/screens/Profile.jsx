@@ -112,7 +112,7 @@ const Profile = ({ navigation }) => {
 
     try {
       const response = await fetch(
-        'https://syilapp.onrender.com/update-profile',
+        'https://syilapp-w8ye.onrender.com/update-profile',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -194,7 +194,7 @@ const Profile = ({ navigation }) => {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Image
-            source={require('../../images/right_arrow.png')}
+            source={require('../../images/circle_arrow.png')}
             style={styles.arrowIcon}
           />
         </TouchableOpacity>
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', paddingTop: Platform.OS === 'android' ? 40 : 20 },
 
   header: { height: 65, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
-  arrowIcon: { width: 11.86, height: 21.21 },
+  arrowIcon: { width: 32, height: 32 },
   headerTitle: { fontSize: 24, fontWeight: '700', textAlign: 'center', width: '94%' },
 
   profileSection: { alignItems: 'center', marginTop: 20 },

@@ -112,7 +112,7 @@ useEffect(() => {
   const fetchArticles = async () => {
     try {
       const response = await fetch(
-        'http://192.168.0.37:3000/articles'
+        'https://syilapp-w8ye.onrender.com/articles'
       );
       const data = await response.json();
 
@@ -140,11 +140,19 @@ useEffect(() => {
 
 
   // ✅ Categories (same logic)
-  const categories = useMemo(() => {
-    const unique = [...new Set(articles.map(a => a.Category))];
-    return unique;
-    //return unique.slice(0, 10);
-  }, [articles]);
+  // const categories = useMemo(() => {
+  //   const unique = [...new Set(articles.map(a => a.Category))];
+  //   return unique;
+  //   //return unique.slice(0, 10);
+  // }, [articles]);
+
+    const categories = useMemo(() => {
+  const unique = [...new Set(articles.map(a => a.Category))];
+
+  return unique
+    .filter(Boolean) // null/undefined remove
+    .sort((a, b) => a.localeCompare(b));
+}, [articles]);
 
   // ✅ Search + Category filter (unchanged)
   const filteredArticles = useMemo(() => {
@@ -278,7 +286,7 @@ useEffect(() => {
               style={styles.searchIcon}
             />
             <TextInput
-              placeholder="Search Procedures"
+              placeholder="Search Knowledge Base"
               value={search}
               onChangeText={setSearch}
               style={styles.searchInput}

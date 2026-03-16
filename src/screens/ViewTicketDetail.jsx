@@ -63,7 +63,7 @@ const ViewTicketDetail = ({ navigation }) => {
           setLoading(true);
 
           const response = await fetch(
-            'https://syilapp.onrender.com/get_ticket_conversation',
+            'https://syilapp-w8ye.onrender.com/get_ticket_conversation',
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -91,7 +91,7 @@ const ViewTicketDetail = ({ navigation }) => {
     if (!ticketId) return;
 
     const response = await fetch(
-      'https://syilapp.onrender.com/get_ticket_conversation',
+      'https://syilapp-w8ye.onrender.com/get_ticket_conversation',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

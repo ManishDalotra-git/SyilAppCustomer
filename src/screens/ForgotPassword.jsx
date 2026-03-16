@@ -30,7 +30,7 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('https://syilapp.onrender.com/forgot_password', {
+      const response = await fetch('https://syilapp-w8ye.onrender.com/forgot_password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -107,7 +107,7 @@ const ForgotPassword = () => {
 
         {/* Footer */}
         
-        <Text style={styles.footer} onPress={() => Linking.openURL('mailto:support@example.com')} >
+        <Text style={styles.footer} onPress={() => Linking.openURL('mailto:support@syil.com')} >
           Need Help? <Text style={styles.support}>Contact Support</Text>
         </Text>
 

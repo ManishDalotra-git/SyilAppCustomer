@@ -6,7 +6,7 @@ import {
   Image,
   TextInput,
   TouchableOpacity,
-  ScrollView, Modal, Linking,  StatusBar, Platform, 
+  ScrollView, Modal, Linking,  StatusBar, Platform, KeyboardAvoidingView, 
 } from 'react-native';
 import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
@@ -32,7 +32,7 @@ const handleSubmit = async () => {
 
   try {
       const response = await fetch(
-        'https://syilapp.onrender.com/check_login_detail',
+        'https://syilapp-w8ye.onrender.com/check_login_detail',
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -105,12 +105,16 @@ const handleSubmit = async () => {
 
 
   return (
-    // <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}></SafeAreaView>
     <ImageBackground
       source={require('../../images/Login_System.png')}
       style={styles.background}
       resizeMode="cover"
     >
+      <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // adjust if you have headers
+              >
       <ScrollView contentContainerStyle={styles.container}
         // keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
@@ -130,7 +134,7 @@ const handleSubmit = async () => {
         <View style={styles.card}>
           <Text style={styles.signIn}>Sign In</Text>
           <Text style={styles.subText}>
-            Enter Your serial number and password to sign in the Customer Portal.
+            Enter Your email address and password to sign in the Customer Portal.
           </Text>
 
           {/* Username */}
@@ -182,7 +186,7 @@ const handleSubmit = async () => {
         </View>
 
         {/* Footer */}
-        <Text style={styles.footer} onPress={() => Linking.openURL('mailto:support@example.com')} >
+        <Text style={styles.footer} onPress={() => Linking.openURL('mailto:support@syil.com')} >
           Need Help? <Text style={styles.support}>Contact Support</Text>
         </Text>
 
@@ -198,6 +202,7 @@ const handleSubmit = async () => {
           <Text style={styles.loadingText}>Please wait...</Text>
         </View>
       </Modal>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 };

@@ -19,7 +19,7 @@ const { ticketId } = route.params || {};
       <Pressable onPress={() => navigation.navigate('Home')} >
       <View style={styles.flexClass}>
         <Image
-          source={require('../../images/right_arrow.png')}
+          source={require('../../images/circle_arrow.png')}
           style={styles.arrowIcon}
         />
         <Text style={styles.labelText}>Done</Text>
@@ -29,7 +29,7 @@ const { ticketId } = route.params || {};
       <Image source={require('../../images/thankyou_image.png')} style={styles.logo} />
       <Text style={styles.title}>Your Ticket Has Been  Submitted</Text>
       <Text style={styles.text}>
-        Lorem ipsum dolor sit amet consectetur. Sapien id eget arcu in. Imperdiet ullamcorper quis duis facilisis rhoncus bibendum.
+        Our team will reply to your ticket soon. You can track the conversation in View Tickets.
       </Text>
         {ticketId && (
             <Text style={styles.ticketId}>
@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
     textAlign:'center'
   },
   arrowIcon:{
-    width:11.86,
-    height:21.21,
+    width:32,
+    height:32,
   },
   logo:{
     textAlign:'center',

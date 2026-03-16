@@ -32,7 +32,7 @@ const Home = () => {
         <View style={styles.cardContent}>
           <Text style={styles.cardTitle}>Knowledge Base</Text>
           <Text style={styles.cardDesc}>
-            Lorem ipsum dolor sit amet consectetur. Sapien id eget arcu in. Imperdiet ullamcorper quis duis facilisis rhoncus bibendum.
+            Sales presentations, Manuals, Technical Files and more.
           </Text>
         </View>
       </Pressable>
@@ -46,7 +46,7 @@ const Home = () => {
         <View style={styles.cardContent}>
           <Text style={styles.cardTitle}>Contact Support</Text>
           <Text style={styles.cardDesc}>
-            Lorem ipsum dolor sit amet consectetur. Sapien id eget arcu in. Imperdiet ullamcorper quis duis facilisis rhoncus bibendum.
+            Submit a support ticket and get a fast response.
           </Text>
         </View>
       </Pressable>
@@ -188,6 +188,7 @@ const styles = StyleSheet.create({
     padding: 25,
     marginBottom: 22,
     height:'auto',
+    minHeight:185,
   },
   cardImage:{
     width:50,

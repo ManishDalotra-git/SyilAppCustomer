@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
   TextInput,
-  TouchableOpacity, Image, Modal, ActivityIndicator, StatusBar, Platform, ImageBackground, Pressable, PermissionsAndroid, 
+  TouchableOpacity, Image, Modal, ActivityIndicator, StatusBar, Platform, ImageBackground, Pressable, PermissionsAndroid, KeyboardAvoidingView, 
 } from 'react-native';
 import { Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
@@ -13,6 +13,7 @@ import CheckBox from '@react-native-community/checkbox';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 const Ticket = () => {
@@ -25,6 +26,10 @@ const Ticket = () => {
   const navigation = useNavigation();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
+  
+
+  
+  
 
 
 //   const requestGalleryPermission = async () => {
@@ -111,6 +116,16 @@ const formatCategoryLabel = (key) => {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('');
 
+
+  useEffect(() => {
+    const loadEmail = async () => {
+      const savedEmail = await AsyncStorage.getItem('userEmail');
+      if (savedEmail) setEmail(savedEmail);
+    };
+    loadEmail();
+  }, []);
+
+
   const [categories, setCategories] = useState({
     Safety_issue: false,
     PLC_issue: false,
@@ -154,7 +169,7 @@ const formatCategoryLabel = (key) => {
       });
     });
 
-    const res = await fetch('https://syilapp.onrender.com/upload-to-hubspot', {
+    const res = await fetch('https://syilapp-w8ye.onrender.com/upload-to-hubspot', {
       method: 'POST',
       body: formData,
       headers: {
@@ -220,7 +235,7 @@ const formatCategoryLabel = (key) => {
       };
 
       try {
-        const responseEmail = await fetch('https://syilapp.onrender.com/get-contact-id', {
+        const responseEmail = await fetch('https://syilapp-w8ye.onrender.com/get-contact-id', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: ticketData.email }),
@@ -246,7 +261,7 @@ const formatCategoryLabel = (key) => {
 
 
       // 2️⃣ Create Ticket
-      const responseTicket = await fetch('https://syilapp.onrender.com/create-ticket', {
+      const responseTicket = await fetch('https://syilapp-w8ye.onrender.com/create-ticket', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contactId, ticketData }),
@@ -295,7 +310,11 @@ const formatCategoryLabel = (key) => {
     <SafeAreaView
           style={[styles.safeArea]}
         >
-
+      <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // adjust if you have headers
+            >
       <View style={[styles.header, { height: 60, paddingTop: 0 }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -303,13 +322,13 @@ const formatCategoryLabel = (key) => {
           hitSlop={{ top: 0, bottom: 10, left: 10, right: 10 }}
         >
           <Image
-              source={require('../../images/right_arrow.png')}
+              source={require('../../images/circle_arrow.png')}
               style={styles.arrowIcon}
           />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>New Ticket</Text>
       </View>
-
+        
     <ScrollView contentContainerStyle={styles.container} >
 
 
@@ -342,6 +361,8 @@ const formatCategoryLabel = (key) => {
           setEmail(text);
           setErrors({ ...errors, email: null });
         }}
+        editable={false}
+        selectTextOnFocus={false}
         placeholder="Enter your email"
       />
       {errors.email && (
@@ -532,6 +553,7 @@ const formatCategoryLabel = (key) => {
       </Modal>
 
     </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -544,8 +566,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   arrowIcon:{
-    width:11.86,
-    height:21.21,
+    width:32,
+    height:32,
   },
   header: {
     width: '100%',
@@ -556,7 +578,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   backButton: {
-    marginRight: 16,
+    marginRight: 5,
   },
   backArrow: {
     fontSize: 24,
@@ -595,8 +617,8 @@ const styles = StyleSheet.create({
     textAlign:'center'
   },
   arrowIcon:{
-    width:11.86,
-    height:21.21,
+    width:32,
+    height:32,
   },
   checkboxStyle: {
     border:1,

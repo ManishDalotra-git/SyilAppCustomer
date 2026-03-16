@@ -12,9 +12,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import RenderHTML from 'react-native-render-html';
+
 import ImageViewing from 'react-native-image-viewing';
+import Video from 'react-native-video';
+import { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
 
 const KnowledgeDetail = ({ route, navigation }) => {
+
+
+  const customHTMLElementModels = {
+    video: HTMLElementModel.fromCustomModel({
+      tagName: 'video',
+      contentModel: HTMLContentModel.block, // ⚠️ important
+    }),
+  };
+
+
   StatusBar.setTranslucent(true);
   StatusBar.setBackgroundColor('transparent');
   StatusBar.setBarStyle('dark-content');
@@ -137,15 +150,42 @@ const KnowledgeDetail = ({ route, navigation }) => {
         }}
       >
         <Image
-          source={{ uri }}
+          source={{ uri }} 
           style={{ width: '100%', height: 200, resizeMode: 'contain', marginVertical: 10 }}
         />
       </TouchableOpacity>
     );
   };
 
-  const renderers = useMemo(
-    () => ({ h3: H3Renderer, img: ImageRenderer }),
+  const VideoRenderer = ({ tnode }) => {
+  const uri = tnode.attributes.src;
+
+  if (!uri) return null;
+
+  return (
+    <View style={{ marginVertical: 12 }}>
+      <Video
+        source={{ uri }}
+        style={{ width: '100%', height: 220 }}
+        controls
+        resizeMode="contain"
+        paused={true}
+        volume={1.0}
+        muted={false}
+        ignoreSilentSwitch="ignore"
+        playInBackground={false}
+        playWhenInactive={false}
+      />
+    </View>
+  );
+};
+
+    const renderers = useMemo(
+    () => ({
+      h3: H3Renderer,
+      img: ImageRenderer,
+      video: VideoRenderer, 
+    }),
     []
   );
 
@@ -183,7 +223,7 @@ const KnowledgeDetail = ({ route, navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Image source={require('../../images/right_arrow.png')} style={styles.arrowIcon} />
+          <Image source={require('../../images/circle_arrow.png')} style={styles.arrowIcon} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Articles</Text>
       </View>
@@ -257,6 +297,7 @@ const KnowledgeDetail = ({ route, navigation }) => {
           contentWidth={width}
           source={{ html }}
           renderers={renderers}
+          customHTMLElementModels={customHTMLElementModels}
           tagsStyles={htmlStyles}
           renderersProps={{
             div: {
@@ -297,9 +338,9 @@ export default KnowledgeDetail;
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  arrowIcon: { width: 12, height: 21 },
-  header: { width: '100%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 60, backgroundColor: '#fff' },
-  backButton: { marginRight: 16 },
+  arrowIcon: { width: 32, height: 32 },
+  header: { width: '94%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 60, backgroundColor: '#fff' },
+  backButton: { marginRight: 0 },
   headerTitle: { fontSize: 24, fontWeight: '700', textAlign: 'center', flex: 1 },
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 80 },
@@ -357,4 +398,4 @@ const htmlStyles = {
   p: { marginVertical: 8, fontSize: 14 },
   h3: { fontSize: 18, fontWeight: '700', marginVertical: 12 },
   a: { color: '#1a73e8', textDecorationLine: 'underline' },
-}  
+};

@@ -22,7 +22,7 @@ const UploadArticle = ({ navigation }) => {
   StatusBar.setBarStyle('dark-content');
 
 
-  const API_URL = 'https://syilapp.onrender.com/upload-articles';
+  const API_URL = 'https://syilapp-w8ye.onrender.com/upload-articles';
 
 
   const handleSelectFile = async () => {
@@ -129,7 +129,7 @@ const UploadArticle = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Image source={require('../../images/right_arrow.png')} style={styles.arrowIcon} />
+          <Image source={require('../../images/circle_arrow.png')} style={styles.arrowIcon} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add New Article</Text>
       </View>
@@ -174,9 +174,9 @@ const styles = StyleSheet.create({
   },
 
 
-  arrowIcon: { width: 12, height: 21 },
+  arrowIcon: { width: 32, height: 32 },
   header: { width: '100%', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 60, backgroundColor: '#fff' },
-  backButton: { marginRight: 16 },
+  backButton: { marginRight: 0 },
   headerTitle: { fontSize: 24, fontWeight: '700', textAlign: 'center', width: '87%', },
 
 
