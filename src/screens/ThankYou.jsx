@@ -35,11 +35,11 @@ const { ticketId } = route.params || {};
             <Text style={styles.ticketId}>
             Reference Number : {ticketId}
             </Text>
-        )} 
+        )}
 
         <Pressable onPress={() => navigation.navigate('KnowledgeBase')} style={styles.card}>
             <View style={styles.button} >
-            <Text style={styles.buttonText}>Explore Knowledge Base</Text>
+              <Text style={styles.buttonText}>Explore Knowledge Base</Text>
             </View>
         </Pressable>
     </View>
@@ -53,12 +53,13 @@ export default ThankYou;
 const styles = StyleSheet.create({
   background: {
     flex: 1,
+    backgroundColor: '#fff',
   },
   container: {
     flexGrow: 1,
     justifyContent: 'flex-start',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 60 : 20,
+    paddingTop: Platform.OS === 'android' ? 50 : 20,
     paddingBottom: 30,
   },
   flexClass:{
