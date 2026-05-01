@@ -1351,7 +1351,7 @@ app.post('/get_owner_ticket', async (req, res) => {
                   {
                     propertyName: 'hubspot_owner_id',
                     operator: 'EQ',
-                    value: '80554724',
+                    value: '35998790',
                   },
                 ],
               },
