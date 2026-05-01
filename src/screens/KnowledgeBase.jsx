@@ -38,6 +38,9 @@ const KnowledgeBase = ({ navigation }) => {
   const currentRoute = route.name;  
 
 
+
+
+
   useFocusEffect(
       useCallback(() => {
           const loadUserName = async () => {
@@ -116,18 +119,31 @@ useEffect(() => {
       );
       const data = await response.json();
 
-      const cleanData = data.filter(
-        item => item['Article title'] && item['Article body']
-      );
+      // const cleanData = data.filter(
+      //   item => item['Article title'] && item['Article body']
+      // );
+
+      const cleanData = data
+  .filter(item => item['Article title'] && item['Article body'])
+  .map(item => ({
+    ...item,
+    newArticle: String(item.newArticle).toLowerCase() === 'true',
+  }));
 
       setArticles(cleanData);
     } catch (err) {
       console.log('Fetch error:', err);
 
       // fallback (offline safety)
-      const cleanData = articlesData.filter(
-        item => item['Article title'] && item['Article body']
-      );
+      // const cleanData = articlesData.filter(
+      //   item => item['Article title'] && item['Article body']
+      // );
+      const cleanData = articlesData
+  .filter(item => item['Article title'] && item['Article body'])
+  .map(item => ({
+    ...item,
+    newArticle: String(item.newArticle).toLowerCase() === 'true',
+  }));
       setArticles(cleanData);
     } finally {
       setLoading(false);
@@ -137,6 +153,11 @@ useEffect(() => {
   fetchArticles();
 }, []);
 
+useEffect(() => {
+  if (route.params?.tab === 'new') {
+    setActiveTab('new');
+  }
+}, [route.params]);
 
 
   // ✅ Categories (same logic)
@@ -146,6 +167,12 @@ useEffect(() => {
   //   //return unique.slice(0, 10);
   // }, [articles]);
 
+
+
+
+
+
+
     const categories = useMemo(() => {
   const unique = [...new Set(articles.map(a => a.Category))];
 
@@ -154,7 +181,52 @@ useEffect(() => {
     .sort((a, b) => a.localeCompare(b));
 }, [articles]);
 
+
+
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'new'
+
+  const hasNewArticles = useMemo(() => {
+  return articles.some(item => item.newArticle === true);
+}, [articles]);
+
+
   // ✅ Search + Category filter (unchanged)
+  // const filteredArticles = useMemo(() => {
+  // const filtered = articles.filter(item => {
+  //   const matchSearch =
+  //     item['Article title']
+  //       ?.toLowerCase()
+  //       .includes(search.toLowerCase());
+
+  //   const matchCategory = selectedCategory
+  //     ? item.Category === selectedCategory
+  //     : true;
+
+  //   return matchSearch && matchCategory;
+  // });
+
+  //   return filtered.sort((a, b) => {
+  //     const titleA = (a['Article title'] || '').trim();
+  //     const titleB = (b['Article title'] || '').trim();
+
+  //     const numA = parseInt(titleA.match(/^\d+/)?.[0], 10);
+  //     const numB = parseInt(titleB.match(/^\d+/)?.[0], 10);
+
+  //     const hasNumA = !isNaN(numA);
+  //     const hasNumB = !isNaN(numB);
+
+  //     if (hasNumA && hasNumB) {
+  //       return numA - numB;
+  //     }
+
+  //     if (!hasNumA && hasNumB) return -1;
+  //     if (hasNumA && !hasNumB) return 1;
+
+  //     return titleA.localeCompare(titleB);
+  //   });
+  // }, [articles, search, selectedCategory]);
+
+
   const filteredArticles = useMemo(() => {
   const filtered = articles.filter(item => {
     const matchSearch =
@@ -166,29 +238,31 @@ useEffect(() => {
       ? item.Category === selectedCategory
       : true;
 
-    return matchSearch && matchCategory;
+    const matchTab =
+  activeTab === 'new'
+    ? String(item.newArticle).toLowerCase() === 'true'
+    : true;
+
+    return matchSearch && matchCategory && matchTab;
   });
 
-    return filtered.sort((a, b) => {
-      const titleA = (a['Article title'] || '').trim();
-      const titleB = (b['Article title'] || '').trim();
+  return filtered.sort((a, b) => {
+    const titleA = (a['Article title'] || '').trim();
+    const titleB = (b['Article title'] || '').trim();
 
-      const numA = parseInt(titleA.match(/^\d+/)?.[0], 10);
-      const numB = parseInt(titleB.match(/^\d+/)?.[0], 10);
+    const numA = parseInt(titleA.match(/^\d+/)?.[0], 10);
+    const numB = parseInt(titleB.match(/^\d+/)?.[0], 10);
 
-      const hasNumA = !isNaN(numA);
-      const hasNumB = !isNaN(numB);
+    const hasNumA = !isNaN(numA);
+    const hasNumB = !isNaN(numB);
 
-      if (hasNumA && hasNumB) {
-        return numA - numB;
-      }
+    if (hasNumA && hasNumB) return numA - numB;
+    if (!hasNumA && hasNumB) return -1;
+    if (hasNumA && !hasNumB) return 1;
 
-      if (!hasNumA && hasNumB) return -1;
-      if (hasNumA && !hasNumB) return 1;
-
-      return titleA.localeCompare(titleB);
-    });
-  }, [articles, search, selectedCategory]);
+    return titleA.localeCompare(titleB);
+  });
+}, [articles, search, selectedCategory, activeTab]);
 
 
   console.log('articles----- ' , articles);
@@ -326,7 +400,51 @@ useEffect(() => {
             />
           </View>
 
-          <Text style={styles.popularTitle}>Popular Articles</Text>
+          
+
+          {/* <Text style={styles.popularTitle}>Articles</Text> */}
+
+          {hasNewArticles && (
+  <View style={styles.tabContainer}>
+    <TouchableOpacity
+      style={[
+        styles.tabButton,
+        activeTab === 'all' && styles.activeTab,
+      ]}
+      onPress={() => setActiveTab('all')}
+    >
+      <Text
+        style={[
+          styles.tabText,
+          activeTab === 'all' && styles.activeTabText,
+        ]}
+      >
+        All Articles
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={[
+        styles.tabButton,
+        activeTab === 'new' && styles.activeTab,
+      ]}
+      onPress={() => setActiveTab('new')}
+    >
+      <Text
+        style={[
+          styles.tabText,
+          activeTab === 'new' && styles.activeTabText,
+        ]}
+      >
+        New Articles
+      </Text>
+    </TouchableOpacity>
+  </View>
+)}
+
+<Text style={styles.popularTitle}>
+  {activeTab === 'new' ? 'New Articles' : 'Articles'}
+</Text>
 
           {/* ARTICLE LIST */}
           <View style={styles.articleListWrapper}>
@@ -519,6 +637,43 @@ const styles = StyleSheet.create({
     tintColor: '#777',
   },
   searchInput: { flex: 1, fontSize: 14, color: '#000' },
+
+
+
+
+
+  tabContainer: {
+  flexDirection: 'row',
+  marginTop: 10,
+  marginBottom: 5,
+},
+
+tabButton: {
+  flex: 1,
+  paddingVertical: 10,
+  borderBottomWidth: 2,
+  borderBottomColor: 'transparent',
+  alignItems: 'center',
+},
+
+activeTab: {
+  borderBottomColor: '#FFEA00',
+},
+
+tabText: {
+  fontSize: 14,
+  color: '#777',
+},
+
+activeTabText: {
+  color: '#000',
+  fontWeight: '600',
+},
+
+
+
+
+
 
   footer: {
   position: 'absolute',

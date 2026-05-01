@@ -30,6 +30,8 @@ const Login = () => {
 const handleSubmit = async () => {
   setLoading(true);
 
+  // https://syilapp-w8ye.onrender.com/check_login_detail
+
   try {
       const response = await fetch(
         'https://syilapp-w8ye.onrender.com/check_login_detail',

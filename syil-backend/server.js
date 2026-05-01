@@ -1103,10 +1103,87 @@ app.post('/update-profile', async (req, res) => {
 
 
 //Get Ticket Details
-app.post('/get_contact_tickets', async (req, res) => {
-  const { contactId } = req.body;
+// app.post('/get_contact_tickets', async (req, res) => {
+//   const { contactId } = req.body;
 
-  console.log('contactId---- ', contactId);
+//   console.log('contactId---- ', contactId);
+//   if (!contactId) {
+//     return res.status(400).json({
+//       message: 'Contact ID is required',
+//     });
+//   }
+
+//   try {
+//     const fetch = (...args) =>
+//       import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+//     // 1️⃣ GET TICKET ASSOCIATIONS
+//     const associationResponse = await fetch(
+//       `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}/associations/ticket`,
+//       {
+//         method: 'GET',
+//         headers: {
+//           'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+//           'Content-Type': 'application/json',
+//         },
+//       }
+//     );
+
+//     const associationData = await associationResponse.json();
+
+
+//     if (!associationData.results || associationData.results.length === 0) {
+//       return res.status(200).json({
+//         message: 'No tickets found',
+//         tickets: [],
+//       });
+//     }
+
+//     // 2️⃣ EXTRACT TICKET IDS
+//     const ticketIds = associationData.results.map(item => item.id);
+
+//     // 3️⃣ FETCH EACH TICKET DETAIL
+//     const ticketPromises = ticketIds.map(ticketId =>
+//       fetch(
+//         `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=subject,createdate,hubspot_owner_id,hs_pipeline_stage`,
+//         {
+//           method: 'GET',
+//           headers: {
+//             'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+//             'Content-Type': 'application/json',
+//           },
+//         }
+//       ).then(res => res.json())
+//     );
+
+//     const ticketResponses = await Promise.all(ticketPromises);
+
+//     // 4️⃣ FORMAT RESPONSE (UI FRIENDLY)
+//     const formattedTickets = ticketResponses.map(ticket => ({
+//       ticketId: ticket.id,
+//       subject: ticket.properties.subject || '',
+//       createdDate: ticket.properties.createdate || '',
+//       ownerId: ticket.properties.hubspot_owner_id || '',
+//       status: ticket.properties.hs_pipeline_stage || '',
+//     }));
+
+//     return res.status(200).json({
+//       message: 'Tickets fetched successfully',
+//       tickets: formattedTickets,
+//     });
+
+//   } catch (error) {
+//     console.error('Ticket Fetch Error:', error);
+//     return res.status(500).json({
+//       message: 'Internal server error',
+//     });
+//   }
+// });
+
+
+app.post('/get_tickets', async (req, res) => {
+  const { contactId, type } = req.body;
+
   if (!contactId) {
     return res.status(400).json({
       message: 'Contact ID is required',
@@ -1117,31 +1194,94 @@ app.post('/get_contact_tickets', async (req, res) => {
     const fetch = (...args) =>
       import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
-    // 1️⃣ GET TICKET ASSOCIATIONS
-    const associationResponse = await fetch(
-      `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}/associations/ticket`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
+    let ticketIds = [];
+
+    // ============================
+    // 🔵 OWNED BY ME
+    // ============================
+    if (type === 'me') {
+
+      const associationResponse = await fetch(
+        `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}/associations/ticket`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const associationData = await associationResponse.json();
+
+      if (associationData.results) {
+        ticketIds = associationData.results.map(item => item.id);
       }
-    );
+    }
 
-    const associationData = await associationResponse.json();
+    // ============================
+    // 🟢 OWNED BY ORGANIZATION
+    // ============================
+    if (type === 'org') {
 
-    if (!associationData.results || associationData.results.length === 0) {
+      // 1️⃣ GET COMPANY ID
+      const contactRes = await fetch(
+        `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?associations=companies`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const contactData = await contactRes.json();
+
+      const companies = contactData?.associations?.companies?.results || [];
+
+      const company = companies.find(c => c.type === 'contact_to_company');
+
+      if (!company) {
+        return res.status(200).json({ tickets: [] });
+      }
+
+      const companyId = company.id;
+
+      // 2️⃣ GET COMPANY TICKETS
+      const companyRes = await fetch(
+        `https://api.hubapi.com/crm/v3/objects/companies/${companyId}?associations=tickets`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const companyData = await companyRes.json();
+
+      const tickets = companyData?.associations?.tickets?.results || [];
+
+      ticketIds = tickets
+        .filter(t => t.type === 'company_to_ticket')
+        .map(t => t.id);
+    }
+
+    // ============================
+    // 🚫 NO TICKETS
+    // ============================
+    if (!ticketIds.length) {
       return res.status(200).json({
         message: 'No tickets found',
         tickets: [],
       });
     }
 
-    // 2️⃣ EXTRACT TICKET IDS
-    const ticketIds = associationData.results.map(item => item.id);
-
-    // 3️⃣ FETCH EACH TICKET DETAIL
+    // ============================
+    // 🎯 FETCH TICKET DETAILS
+    // ============================
     const ticketPromises = ticketIds.map(ticketId =>
       fetch(
         `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=subject,createdate,hubspot_owner_id,hs_pipeline_stage`,
@@ -1157,7 +1297,6 @@ app.post('/get_contact_tickets', async (req, res) => {
 
     const ticketResponses = await Promise.all(ticketPromises);
 
-    // 4️⃣ FORMAT RESPONSE (UI FRIENDLY)
     const formattedTickets = ticketResponses.map(ticket => ({
       ticketId: ticket.id,
       subject: ticket.properties.subject || '',
@@ -1167,17 +1306,104 @@ app.post('/get_contact_tickets', async (req, res) => {
     }));
 
     return res.status(200).json({
-      message: 'Tickets fetched successfully',
       tickets: formattedTickets,
     });
 
   } catch (error) {
-    console.error('Ticket Fetch Error:', error);
+    console.error('Error:', error);
     return res.status(500).json({
       message: 'Internal server error',
     });
   }
 });
+
+
+
+app.post('/get_owner_tickets', async (req, res) => {
+  const { ownerId } = req.body;
+
+  // if (!ownerId) {
+  //   return res.status(400).json({
+  //     message: 'Owner ID is required',
+  //   });
+  // }
+
+  try {
+    const fetch = (...args) =>
+      import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+    let allTickets = [];
+    let after = null;
+
+    do {
+      const response = await fetch(
+        'https://api.hubapi.com/crm/v3/objects/tickets/search',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            filterGroups: [
+              {
+                filters: [
+                  {
+                    propertyName: 'hubspot_owner_id',
+                    operator: 'EQ',
+                    value: '80554724',
+                  },
+                ],
+              },
+            ],
+            limit: 100,
+            after: after, // 👈 pagination cursor
+            properties: [
+              'subject',
+              'content',
+              'hs_pipeline',
+              'hs_pipeline_stage',
+              'hubspot_owner_id',
+              'createdate',
+            ],
+            sorts: ['createdate'],
+          }),
+        }
+      );
+
+      const data = await response.json();
+      console.log('data---ticketowner ', data);
+
+      allTickets = [...allTickets, ...(data.results || [])];
+
+      after = data?.paging?.next?.after || null;
+
+    } while (after);
+
+    const tickets = allTickets.map(item => ({
+      ticketId: item.id,
+      subject: item.properties.subject || '',
+      createdDate: item.properties.createdate || '',
+      ownerId: item.properties.hubspot_owner_id || '',
+      status: item.properties.hs_pipeline_stage || '',
+      content: item.properties.content || '',
+    }));
+
+    return res.status(200).json({
+      message: 'All owner tickets fetched',
+      total: tickets.length,
+      tickets,
+    });
+
+  } catch (error) {
+    console.error('Owner Ticket Fetch Error:', error);
+    return res.status(500).json({
+      message: 'Internal server error',
+    });
+  }
+});
+
+
 
 
 //Get Conversation Details

@@ -4,6 +4,7 @@ import { StyleSheet, Text, View, Image, TouchableOpacity, ImageBackground, Statu
 import { useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import { Picker } from '@react-native-picker/picker';
 
 const ViewTicket = ({ navigation }) => {
 
@@ -18,6 +19,8 @@ const ViewTicket = ({ navigation }) => {
     const [contactID, setContactID] = useState('');
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(false);
+
+    const [ticketType, setTicketType] = useState('me');
 
 
     useFocusEffect(
@@ -38,7 +41,43 @@ const ViewTicket = ({ navigation }) => {
 
             loadUserName();
         }, [])
-    );
+    ); 
+
+    // useFocusEffect(
+    //     useCallback(() => {
+    //         const fetchTickets = async () => {
+    //             if (!contactID) return;
+
+    //             try {
+    //                 setLoading(true);
+
+    //                 //https://syilapp-w8ye.onrender.com/get_contact_tickets
+    //                 //http://192.168.0.84:3000
+
+    //                 const response = await fetch('http://192.168.0.36:3000/get_contact_tickets', {
+    //                 method: 'POST',
+    //                 headers: {
+    //                     'Content-Type': 'application/json',
+    //                 },
+    //                 body: JSON.stringify({
+    //                     contactId: contactID,
+    //                 }),
+    //                 });
+
+    //                 const data = await response.json();
+    //                 setTickets(data.tickets || []);
+    //                 setLoading(false);
+    //             } catch (error) {
+    //                 console.log('Ticket fetch error', error);
+    //                 setLoading(false);
+    //             }
+    //         };
+
+    //         fetchTickets();
+    //     }, [contactID])
+    // );
+
+
 
     useFocusEffect(
         useCallback(() => {
@@ -47,13 +86,18 @@ const ViewTicket = ({ navigation }) => {
 
                 try {
                     setLoading(true);
-                    const response = await fetch('https://syilapp-w8ye.onrender.com/get_contact_tickets', {
+
+                    //https://syilapp-w8ye.onrender.com/get_contact_tickets
+                    //http://192.168.0.84:3000
+
+                    const response = await fetch('https://syilapp-w8ye.onrender.com/get_tickets', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
                         contactId: contactID,
+                        type: ticketType,
                     }),
                     });
 
@@ -67,8 +111,10 @@ const ViewTicket = ({ navigation }) => {
             };
 
             fetchTickets();
-        }, [contactID])
+        }, [contactID, ticketType])
     );
+
+
 
     console.log('tickets--- ' , tickets);
     console.log('contactID--- ' , contactID);
@@ -273,6 +319,26 @@ const ViewTicket = ({ navigation }) => {
             </View>
 
 
+            <View style={{ marginBottom: 10 }}>
+                <View style={{
+                    borderWidth: 1,
+                    borderColor: '#ddd',
+                    borderRadius: 6,
+                    height: 50,
+                    justifyContent: 'center',
+                    fontSize: 10,
+                }}>
+                    <Picker
+                    selectedValue={ticketType}
+                    onValueChange={(itemValue) => setTicketType(itemValue)}
+                    >
+                    <Picker.Item label="Owned by me" value="me" />
+                    <Picker.Item label="Owned by organization" value="org" />
+                    </Picker>
+                </View>
+            </View>
+
+
             <View style={styles.ticketContainer}>
                 {/* TABLE HEADER */}
                 <View style={styles.tableHeader}>
@@ -288,7 +354,7 @@ const ViewTicket = ({ navigation }) => {
                     showsVerticalScrollIndicator={false}
                     keyExtractor={(item) => item.ticketId}
                     //contentContainerStyle={{ paddingBottom: 200, }}
-                    contentContainerStyle={{ paddingBottom: 300, paddingTop: 0, flexDirection: 'column-reverse',}}
+                    contentContainerStyle={{ paddingBottom: 420, paddingTop: 0, flexDirection: 'column-reverse',}}
                     //ListFooterComponent={<View style={{ height: 290 }} />}
                     renderItem={({ item }) => (
                     <Pressable

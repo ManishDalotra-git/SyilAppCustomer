@@ -117,11 +117,29 @@ const More = ({ navigation }) => {
             </TouchableOpacity>
             )}
 
+            {email === 'manish.dalotra@techstriker.com' && (
+            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('OwnerTickets')} >
+                <View style={styles.left}>
+                <Image source={require('../../images/ArticleIcon.png')} style={styles.icon} />
+                <Text style={styles.text}>Owner Tickets</Text>
+                </View>
+                <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
+            </TouchableOpacity>
+            )}
+
             {/* Ask Alex */}
             <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('AskAlex')} >
                 <View style={styles.left}>
                 <Image source={require('../../images/ask.png')} style={styles.icon} />
                 <Text style={styles.text}>Ask Alex</Text>
+                </View>
+                <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('Chatscreen')} >
+                <View style={styles.left}>
+                <Image source={require('../../images/ask.png')} style={styles.icon} />
+                <Text style={styles.text}>Chat Screen</Text>
                 </View>
                 <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
             </TouchableOpacity>
