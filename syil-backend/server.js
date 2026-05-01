@@ -1319,7 +1319,7 @@ app.post('/get_tickets', async (req, res) => {
 
 
 
-app.post('/get_owner_tickets', async (req, res) => {
+app.post('/get_owner_ticket', async (req, res) => {
   const { ownerId } = req.body;
 
   // if (!ownerId) {

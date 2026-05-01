@@ -69,7 +69,7 @@ const OwnerTickets = ({ navigation }) => {
           //https://syilapp-w8ye.onrender.com/get_owner_tickets
 
           const response = await fetch(
-            'https://syilapp-w8ye.onrender.com/get_owner_tickets',
+            'https://syilapp-w8ye.onrender.com/get_owner_ticket',
             {
               method: 'POST',
               headers: {
