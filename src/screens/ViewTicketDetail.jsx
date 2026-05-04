@@ -121,6 +121,9 @@ const ViewTicketDetail = ({ navigation }) => {
   const outgoingMessage = messages.find(msg => msg.direction === 'OUTGOING');
   const hasOutgoing = messages.some(msg => msg.direction === 'OUTGOING');
   const dynamicEmail = outgoingMessage?.senderName;
+  const channelAccountId = outgoingMessage?.channelAccountId;
+  const channelId = outgoingMessage?.channelId;
+  const conversationsThreadId = outgoingMessage?.conversationsThreadId;
 
   const incomingMessage = [...messages]
     .reverse()
@@ -211,10 +214,12 @@ const ViewTicketDetail = ({ navigation }) => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            threadId: ticketId,
+            threadId: conversationsThreadId,
             text: messageText,
             recipientEmail: incomingEmail,
             attachmentIds,
+            channelAccountId: channelAccountId,
+            channelId: channelId,
           }),
         }
       );

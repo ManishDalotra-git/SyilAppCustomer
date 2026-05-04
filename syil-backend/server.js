@@ -1531,13 +1531,15 @@ app.post('/upload-to-hubspot', upload.array('files'), async (req, res) => {
 
 // ✅ Send Message to HubSpot Thread
 app.post('/send-hubspot-message', async (req, res) => {
-  const { threadId, text, recipientEmail, attachmentIds } = req.body;
+  const { threadId, text, recipientEmail, attachmentIds, channelAccountId, channelId } = req.body;
 
   console.log('=== send-hubspot-message hit ===');
   console.log('threadId:', threadId);
   console.log('text:', text);
   console.log('recipientEmail:', recipientEmail);
   console.log('attachmentIds:', attachmentIds);
+  console.log('channelAccountId:', channelAccountId);
+  console.log('channelId:', channelId);
 
   try {
     // ✅ Postman format exactly match
@@ -1545,13 +1547,13 @@ app.post('/send-hubspot-message', async (req, res) => {
       type: 'MESSAGE',
       text: text,
       senderActorId: 'A-80554724',
-      channelId: '1002',
-      channelAccountId: '597383280',
+      channelId: channelId,
+      channelAccountId: channelAccountId,
       recipients: [
         {
           recipientField: 'TO',
           deliveryIdentifiers: [
-            { type: 'HS_EMAIL_ADDRESS', value: 'manish.dalotra@techstriker.com' },
+            { type: 'HS_EMAIL_ADDRESS', value: recipientEmail },
           ],
         },
       ],
@@ -1565,7 +1567,7 @@ app.post('/send-hubspot-message', async (req, res) => {
     console.log('Final body HubSpot ko ja raha hai:', JSON.stringify(body, null, 2));
 
     const response = await axios.post(
-      `https://api.hubapi.com/conversations/v3/conversations/threads/10707623690/messages`,
+      `https://api.hubapi.com/conversations/v3/conversations/threads/${threadId}/messages`,
       body,
       {
         headers: {
