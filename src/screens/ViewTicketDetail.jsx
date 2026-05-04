@@ -185,21 +185,21 @@ const ViewTicketDetail = ({ navigation }) => {
       let attachmentIds = [];
 
 
-      console.log('Step 1: Owner ID fetch by email:', email);
-      const ownerRes = await fetch(
-        'https://syilapp-w8ye.onrender.com/get-owner-id',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email }),
-        }
-      );
-      const ownerData = await ownerRes.json();
-      console.log('Owner data mila:', ownerData);  
-      const senderActorId = ownerData.ownerId
-        ? `A-${ownerData.ownerId}`
-        : 'A-35998790'; // fallback
-      console.log('senderActorId:', senderActorId);
+      // console.log('Step 1: Owner ID fetch by email:', email);
+      // const ownerRes = await fetch(
+      //   'https://syilapp-w8ye.onrender.com/get-owner-id',
+      //   {
+      //     method: 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify({ email: email }),
+      //   }
+      // );
+      // const ownerData = await ownerRes.json();
+      // console.log('Owner data mila:', ownerData);  
+      // const senderActorId = ownerData.ownerId
+      //   ? `A-${ownerData.ownerId}`
+      //   : 'A-35998790'; // fallback
+      // console.log('senderActorId:', senderActorId);
 
 
       if (selectedFiles.length > 0) {
