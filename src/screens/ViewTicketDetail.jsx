@@ -99,7 +99,7 @@ const ViewTicketDetail = ({ navigation }) => {
     try {
       if (!ticketId) return;
       const response = await fetch(
-        'https://192.168.0.36:3000/get_ticket_conversation',
+        'https://syilapp-w8ye.onrender.com/get_ticket_conversation',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }, 
@@ -193,7 +193,7 @@ const ViewTicketDetail = ({ navigation }) => {
         });
 
         const uploadRes = await fetch(
-          'http://192.168.0.36:3000/upload-to-hubspot',
+          'https://syilapp-w8ye.onrender.com/upload-to-hubspot',
           {
             method: 'POST',
             body: formData,
@@ -206,7 +206,7 @@ const ViewTicketDetail = ({ navigation }) => {
 
       // Step 2: Message send karo
       const sendRes = await fetch(
-        'http://192.168.0.36:3000/send-hubspot-message',
+        'https://syilapp-w8ye.onrender.com/send-hubspot-message',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
