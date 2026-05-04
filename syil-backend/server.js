@@ -1582,11 +1582,10 @@ app.post('/send-hubspot-message', async (req, res) => {
   console.log('senderActorId received:', senderActorId);
 
   try {
-    // ✅ Postman format exactly match
     const body = {
       type: 'MESSAGE',
       text: text,
-      senderActorId: `A-${senderActorId}` || 'A-35998790',
+      senderActorId: `A-${senderActorId}`,
       channelId: channelId,
       channelAccountId: channelAccountId,
       recipients: [
