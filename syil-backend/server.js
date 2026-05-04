@@ -1461,7 +1461,6 @@ app.post('/get_ticket_conversation', async (req, res) => {
         const sender = m.senders?.[0] || {};
         const email = sender?.deliveryIdentifier?.value || '';
         const name = sender?.name || email;
-        const conversationsThreadId = sender?.conversationsThreadId || '';
 
         return {
           id: m.id,
@@ -1474,7 +1473,7 @@ app.post('/get_ticket_conversation', async (req, res) => {
           attachments: m.attachments,
           channelAccountId : m.channelAccountId,
           channelId: m.channelId,
-          conversationsThreadId: conversationsThreadId
+          conversationsThreadId: m.conversationsThreadId,
         };
       });
 
