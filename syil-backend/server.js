@@ -755,7 +755,7 @@ app.post('/check_login_detail', async (req, res) => {
               ],
             },
           ],
-          properties: ['email', 'mobile_password', 'firstname', 'lastname', 'profile_image', 'bio', 'phone', 'gender'],
+          properties: ['email', 'mobile_password', 'firstname', 'lastname', 'profile_image', 'bio', 'phone', 'gender', 'app_support_team_member'],
         }),
       }
     );
@@ -800,6 +800,7 @@ app.post('/check_login_detail', async (req, res) => {
         bio: contact.properties.bio || '',
         phone: contact.properties.phone || '',
         gender: contact.properties.gender || '',
+        app_support_team_member: contact.properties.app_support_team_member || '',
       },
     });
 

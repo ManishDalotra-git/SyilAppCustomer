@@ -191,7 +191,7 @@ const ViewTicketDetail = ({ navigation }) => {
   {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'chen@syil.com' }),
+    body: JSON.stringify({ email: email }),
   }
 );
 
@@ -204,7 +204,7 @@ console.log('ownerId mila:', ownerData.ownerId);
 
 const senderActorId = ownerData.ownerId
   ? `A-${ownerData.ownerId}`
-  : 'A-80554724';
+  : 'A-7712092';
 
 console.log('Final senderActorId:', senderActorId);
 
