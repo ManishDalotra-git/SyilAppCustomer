@@ -46,6 +46,7 @@ const ViewTicketDetail = ({ navigation }) => {
   const [messageText, setMessageText] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [sending, setSending] = useState(false);
+  const [senderActorId, setSenderActorId] = useState('');
 
   /* ================= USER INFO ================= */
   useFocusEffect(
@@ -183,6 +184,35 @@ const ViewTicketDetail = ({ navigation }) => {
     setSending(true);
     try {
       let attachmentIds = [];
+
+
+      const ownerRes = await fetch(
+  'https://syilapp-w8ye.onrender.com/get-owner-id',
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email }),
+  }
+);
+
+const ownerRaw = await ownerRes.text();
+console.log('Owner RAW response:', ownerRaw);
+console.log('Owner status:', ownerRes.status);
+
+const ownerData = JSON.parse(ownerRaw);
+console.log('ownerId mila:', ownerData.ownerId);
+
+const senderActorId = ownerData.ownerId
+  ? `A-${ownerData.ownerId}`
+  : 'A-80554724';
+
+console.log('Final senderActorId:', senderActorId);
+
+setSenderActorId(senderActorId)
+console.log('SenderActorId---- ', senderActorId);
+
+
+
       if (selectedFiles.length > 0) {
         const formData = new FormData();
         selectedFiles.forEach((file) => {
@@ -218,6 +248,7 @@ const ViewTicketDetail = ({ navigation }) => {
             attachmentIds,
             channelAccountId: channelAccountId,
             channelId: channelId,
+            senderActorId: senderActorId,
           }),
         }
       );

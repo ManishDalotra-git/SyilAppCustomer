@@ -1408,6 +1408,8 @@ app.post('/get_owner_ticket', async (req, res) => {
 
 app.post('/get-owner-id', async (req, res) => {
   const { email } = req.body;
+  console.log('=== get-owner-id hit ===');
+  console.log('Email received:', email);
 
   if (!email) {
     return res.status(400).json({ error: 'Email required' });
@@ -1424,19 +1426,19 @@ app.post('/get-owner-id', async (req, res) => {
     );
 
     const owners = response.data.results || [];
-    console.log('All owners:', owners.map(o => o.email));
+    console.log('Total owners found:', owners.length);
+    console.log('All owner emails:', owners.map(o => o.email));
 
-    // ✅ Email match karke owner find karo
     const matchedOwner = owners.find(
       (owner) => owner.email?.toLowerCase() === email?.toLowerCase()
     );
 
+    console.log('Matched owner:', matchedOwner || 'NOT FOUND');
+
     if (!matchedOwner) {
-      console.log('Owner not found for email:', email);
-      return res.status(404).json({ error: 'Owner not found', ownerId: null });
+      return res.status(200).json({ ownerId: null }); // ❌ 404 ki jagah 200 return karo
     }
 
-    console.log('Matched owner:', matchedOwner.email, '→ ID:', matchedOwner.id);
     return res.status(200).json({ ownerId: matchedOwner.id });
 
   } catch (err) {
@@ -1586,7 +1588,7 @@ app.post('/send-hubspot-message', async (req, res) => {
     const body = {
       type: 'MESSAGE',
       text: text,
-      senderActorId: 'A-80554724',
+      senderActorId: senderActorId,
       channelId: channelId,
       channelAccountId: channelAccountId,
       recipients: [
