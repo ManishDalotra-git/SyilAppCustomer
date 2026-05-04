@@ -195,9 +195,10 @@ const ViewTicketDetail = ({ navigation }) => {
         }
       );
       const ownerData = await ownerRes.json();
+      console.log('Owner data mila:', ownerData);  
       const senderActorId = ownerData.ownerId
         ? `A-${ownerData.ownerId}`
-        : 'A-80554724'; // fallback
+        : 'A-35998790'; // fallback
       console.log('senderActorId:', senderActorId);
 
 
@@ -241,14 +242,16 @@ const ViewTicketDetail = ({ navigation }) => {
         }
       );
 
+      
+
       const sendData = await sendRes.json();
+      console.log('Message send karne ka response mila:', sendData);
 
       if (sendData.success) {
         Alert.alert('Success', 'Message sent successfully!');
         setReplyModalVisible(false);
         setMessageText('');
         setSelectedFiles([]);
-        attachmentIds = [];
         onRefresh();
       } else {
         Alert.alert('Error', 'Message not sent. Please try again.');
