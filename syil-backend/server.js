@@ -14,6 +14,7 @@ const FormData = require('form-data');
 const fs = require('fs');
 
 const multer = require('multer');
+const { send } = require('process');
 const hubspotUpload = multer({
   dest: 'uploads/'
 });
@@ -714,7 +715,7 @@ app.post('/create-ticket', async (req, res) => {
 // });
 
 
- 
+
 
 
 
@@ -1451,6 +1452,8 @@ app.post('/get_ticket_conversation', async (req, res) => {
 
     const msgData = await msgRes.json();
 
+    console.log('msgData--- ', msgData.results);  
+
     // 3️⃣ FORMAT MESSAGES
     const formattedMessages = msgData.results
       .filter(m => m.type === 'MESSAGE')
@@ -1458,6 +1461,7 @@ app.post('/get_ticket_conversation', async (req, res) => {
         const sender = m.senders?.[0] || {};
         const email = sender?.deliveryIdentifier?.value || '';
         const name = sender?.name || email;
+        const conversationsThreadId = sender?.conversationsThreadId || '';
 
         return {
           id: m.id,
@@ -1468,6 +1472,9 @@ app.post('/get_ticket_conversation', async (req, res) => {
           createdAt: m.createdAt,
           subject : m.subject,
           attachments: m.attachments,
+          channelAccountId : m.channelAccountId,
+          channelId: m.channelId,
+          conversationsThreadId: conversationsThreadId
         };
       });
 
@@ -1480,6 +1487,105 @@ app.post('/get_ticket_conversation', async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 });
+
+
+
+app.post('/upload-to-hubspot', upload.array('files'), async (req, res) => {
+  try {
+    const uploadedFiles = [];
+
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        const formData = new FormData();
+        formData.append('file', fs.createReadStream(file.path));
+        formData.append('fileName', file.originalname);
+        formData.append('folderId', '204201997753');
+        formData.append('options', JSON.stringify({ access: 'PUBLIC_INDEXABLE' }));
+
+        const response = await axios.post(
+          'https://api.hubapi.com/files/v3/files',
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+              ...formData.getHeaders(),
+            },
+          }
+        );
+
+        uploadedFiles.push({
+          id: response.data.id,
+          url: response.data.url,
+          name: file.originalname,
+        });
+
+        fs.unlinkSync(file.path); // temp file delete
+      }
+    }
+
+    res.status(200).json({ files: uploadedFiles });
+  } catch (err) {
+    console.error('Upload error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'File upload failed' });
+  }
+});
+
+// ✅ Send Message to HubSpot Thread
+app.post('/send-hubspot-message', async (req, res) => {
+  const { threadId, text, recipientEmail, attachmentIds } = req.body;
+
+  console.log('=== send-hubspot-message hit ===');
+  console.log('threadId:', threadId);
+  console.log('text:', text);
+  console.log('recipientEmail:', recipientEmail);
+  console.log('attachmentIds:', attachmentIds);
+
+  try {
+    // ✅ Postman format exactly match
+    const body = {
+      type: 'MESSAGE',
+      text: text,
+      senderActorId: 'A-80554724',
+      channelId: '1002',
+      channelAccountId: '597383280',
+      recipients: [
+        {
+          recipientField: 'TO',
+          deliveryIdentifiers: [
+            { type: 'HS_EMAIL_ADDRESS', value: 'manish.dalotra@techstriker.com' },
+          ],
+        },
+      ],
+    };
+
+    // ✅ Attachments sirf tab add karo jab hain
+    if (attachmentIds && attachmentIds.length > 0) {
+      body.attachments = attachmentIds.map((id) => ({ fileId: String(id) }));
+    }
+
+    console.log('Final body HubSpot ko ja raha hai:', JSON.stringify(body, null, 2));
+
+    const response = await axios.post(
+      `https://api.hubapi.com/conversations/v3/conversations/threads/10707623690/messages`,
+      body,
+      {
+        headers: {
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log('✅ HubSpot response:', response.data);
+    return res.status(200).json({ success: true, data: response.data });
+
+  } catch (err) {
+    console.error('❌ Send message error:', err.response?.data || err.message);
+    return res.status(500).json({ error: 'Message send failed', detail: err.response?.data });
+  }
+});
+
+ 
 
 
 app.listen(PORT,'0.0.0.0', () => console.log(`Server running on http://localhost:${PORT}`));
