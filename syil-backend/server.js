@@ -1585,7 +1585,7 @@ app.post('/send-hubspot-message', async (req, res) => {
     const body = {
       type: 'MESSAGE',
       text: text,
-      senderActorId: senderActorId || 'A-35998790',
+      senderActorId: senderActorId ,
       channelId: channelId,
       channelAccountId: channelAccountId,
       recipients: [
