@@ -184,24 +184,7 @@ const ViewTicketDetail = ({ navigation }) => {
     try {
       let attachmentIds = [];
 
-
-      console.log('Step 1: Owner ID fetch kar rahe hain for email:', email);
-      const ownerRes = await fetch(
-        'https://syilapp-w8ye.onrender.com/get-owner-id',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        }
-      );
-      const ownerData = await ownerRes.json();
-      console.log('Owner data mila:', ownerData);  
-      const senderActorId = ownerData.ownerId
-        ? `A-${ownerData.ownerId}`
-        : 'A-35998790'; // fallback
-      console.log('senderActorId:', senderActorId);
-
-
+      
       if (selectedFiles.length > 0) {
         const formData = new FormData();
         selectedFiles.forEach((file) => {
@@ -237,21 +220,18 @@ const ViewTicketDetail = ({ navigation }) => {
             attachmentIds,
             channelAccountId: channelAccountId,
             channelId: channelId,
-            senderActorId: senderActorId,
           }),
         }
       );
 
-      
-
       const sendData = await sendRes.json();
-      console.log('Message send karne ka response mila:', sendData);
 
       if (sendData.success) {
         Alert.alert('Success', 'Message sent successfully!');
         setReplyModalVisible(false);
         setMessageText('');
         setSelectedFiles([]);
+        attachmentIds = [];
         onRefresh();
       } else {
         Alert.alert('Error', 'Message not sent. Please try again.');
