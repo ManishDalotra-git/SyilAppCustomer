@@ -1406,6 +1406,45 @@ app.post('/get_owner_ticket', async (req, res) => {
 
 
 
+app.post('/get-owner-id', async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email required' });
+  }
+
+  try {
+    const response = await axios.get(
+      'https://api.hubapi.com/crm/v3/owners?archived=false',
+      {
+        headers: {
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+        },
+      }
+    );
+
+    const owners = response.data.results || [];
+    console.log('All owners:', owners.map(o => o.email));
+
+    // ✅ Email match karke owner find karo
+    const matchedOwner = owners.find(
+      (owner) => owner.email?.toLowerCase() === email?.toLowerCase()
+    );
+
+    if (!matchedOwner) {
+      console.log('Owner not found for email:', email);
+      return res.status(404).json({ error: 'Owner not found', ownerId: null });
+    }
+
+    console.log('Matched owner:', matchedOwner.email, '→ ID:', matchedOwner.id);
+    return res.status(200).json({ ownerId: matchedOwner.id });
+
+  } catch (err) {
+    console.error('Get owner error:', err.response?.data || err.message);
+    return res.status(500).json({ error: 'Failed to get owner' });
+  }
+});
+
 
 //Get Conversation Details
 app.post('/get_ticket_conversation', async (req, res) => {
@@ -1531,7 +1570,7 @@ app.post('/upload-to-hubspot', upload.array('files'), async (req, res) => {
 
 // ✅ Send Message to HubSpot Thread
 app.post('/send-hubspot-message', async (req, res) => {
-  const { threadId, text, recipientEmail, attachmentIds, channelAccountId, channelId } = req.body;
+  const { threadId, text, recipientEmail, attachmentIds, channelAccountId, channelId, senderActorId } = req.body;
 
   console.log('=== send-hubspot-message hit ===');
   console.log('threadId:', threadId);
@@ -1540,13 +1579,14 @@ app.post('/send-hubspot-message', async (req, res) => {
   console.log('attachmentIds:', attachmentIds);
   console.log('channelAccountId:', channelAccountId);
   console.log('channelId:', channelId);
+  console.log('senderActorId received:', senderActorId);
 
   try {
     // ✅ Postman format exactly match
     const body = {
       type: 'MESSAGE',
       text: text,
-      senderActorId: 'A-80554724',
+      senderActorId: `A-${senderActorId}` || 'A-35998790',
       channelId: channelId,
       channelAccountId: channelAccountId,
       recipients: [

@@ -184,7 +184,23 @@ const ViewTicketDetail = ({ navigation }) => {
     try {
       let attachmentIds = [];
 
-      // Step 1: Files upload karo agar hain
+
+      console.log('Step 1: Owner ID fetch kar rahe hain for email:', email);
+      const ownerRes = await fetch(
+        'https://syilapp-w8ye.onrender.com/get-owner-id',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        }
+      );
+      const ownerData = await ownerRes.json();
+      const senderActorId = ownerData.ownerId
+        ? `A-${ownerData.ownerId}`
+        : 'A-80554724'; // fallback
+      console.log('senderActorId:', senderActorId);
+
+
       if (selectedFiles.length > 0) {
         const formData = new FormData();
         selectedFiles.forEach((file) => {
@@ -207,7 +223,7 @@ const ViewTicketDetail = ({ navigation }) => {
         attachmentIds = uploadData.files.map((f) => f.id);
       }
 
-      // Step 2: Message send karo
+      
       const sendRes = await fetch(
         'https://syilapp-w8ye.onrender.com/send-hubspot-message',
         {
@@ -220,6 +236,7 @@ const ViewTicketDetail = ({ navigation }) => {
             attachmentIds,
             channelAccountId: channelAccountId,
             channelId: channelId,
+            senderActorId: senderActorId,
           }),
         }
       );
@@ -231,13 +248,14 @@ const ViewTicketDetail = ({ navigation }) => {
         setReplyModalVisible(false);
         setMessageText('');
         setSelectedFiles([]);
+        attachmentIds = [];
         onRefresh();
       } else {
-        Alert.alert('Error', 'Message send nahi hua');
+        Alert.alert('Error', 'Message not sent. Please try again.');
       }
     } catch (err) {
       console.log('Send error', err);
-      Alert.alert('Error', 'Kuch gadbad ho gayi');
+      Alert.alert('Error', 'An error occurred while sending the message. Please try again.');
     } finally {
       setSending(false);
     }
@@ -353,9 +371,9 @@ const ViewTicketDetail = ({ navigation }) => {
             <Text style={styles.noTicketText}>No conversation found</Text>
           )}
 
-          {/* ✅ REPLY BUTTONS - Same logic as before */}
+          
           {isChen ? (
-            // ONLY for chen/manish → Reply to Customer (Modal open)
+           
             <TouchableOpacity
               style={styles.ReplyStyle}
               onPress={() => setReplyModalVisible(true)}
@@ -369,7 +387,7 @@ const ViewTicketDetail = ({ navigation }) => {
               Please wait for the support reply.
             </Text>
           ) : hasOutgoing ? (
-            // ✅ Existing - Reply to Support Team (mailto - same as before)
+            
             <Text
               style={styles.ReplyStyle}
               onPress={() =>
@@ -386,7 +404,7 @@ const ViewTicketDetail = ({ navigation }) => {
         </View>
       </View>
 
-      {/* ✅ REPLY MODAL */}
+     
       <Modal
         visible={replyModalVisible}
         animationType="slide"
@@ -399,7 +417,7 @@ const ViewTicketDetail = ({ navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            {/* Modal Header */}
+           
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Reply to Customer</Text>
               <TouchableOpacity
@@ -413,13 +431,13 @@ const ViewTicketDetail = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            {/* To: field */}
+            
             <Text style={styles.toLabel}>
               To:{' '}
               <Text style={styles.toEmail}>{incomingEmail}</Text>
             </Text>
 
-            {/* Message Input */}
+            
             <TextInput
               style={styles.messageInput}
               placeholder="Type your message here..."
@@ -431,7 +449,7 @@ const ViewTicketDetail = ({ navigation }) => {
               textAlignVertical="top"
             />
 
-            {/* Selected Files Preview */}
+            
             {selectedFiles.length > 0 && (
               <ScrollView
                 horizontal
@@ -458,7 +476,7 @@ const ViewTicketDetail = ({ navigation }) => {
               </ScrollView>
             )}
 
-            {/* Action Buttons */}
+            
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.uploadBtn} onPress={pickFiles}>
                 <Text style={styles.uploadBtnText}>📎 Attach Files</Text>
@@ -687,8 +705,8 @@ const styles = StyleSheet.create({
   },
   removeFileBtn: {
     position: 'absolute',
-    top: -6,
-    right: -6,
+    top: 0,
+    right: 0,
     backgroundColor: '#ff4444',
     borderRadius: 10,
     width: 20,
@@ -704,14 +722,14 @@ const styles = StyleSheet.create({
     maxWidth: 80,
   },
   modalActions: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 10,
   },
   uploadBtn: {
-    flex: 1,
-    borderWidth: 1.5,
+    width: '100%',
+    borderWidth: 1,
     borderColor: '#000',
     borderRadius: 8,
     padding: 14,
@@ -719,7 +737,7 @@ const styles = StyleSheet.create({
   },
   uploadBtnText: { color: '#000', fontWeight: '600', fontSize: 14 },
   sendBtn: {
-    flex: 2,
+    width: '100%',
     backgroundColor: '#FFEA00',
     borderRadius: 8,
     padding: 14,
