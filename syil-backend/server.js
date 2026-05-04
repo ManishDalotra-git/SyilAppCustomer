@@ -1570,7 +1570,7 @@ app.post('/upload-to-hubspot', upload.array('files'), async (req, res) => {
 
 // ✅ Send Message to HubSpot Thread
 app.post('/send-hubspot-message', async (req, res) => {
-  const { threadId, text, recipientEmail, attachmentIds, channelAccountId, channelId, senderActorId, } = req.body;
+  const { threadId, text, recipientEmail, attachmentIds, channelAccountId, channelId, senderActorId } = req.body;
 
   console.log('=== send-hubspot-message hit ===');
   console.log('threadId:', threadId);
@@ -1582,10 +1582,11 @@ app.post('/send-hubspot-message', async (req, res) => {
   console.log('senderActorId received:', senderActorId);
 
   try {
+    // ✅ Postman format exactly match
     const body = {
       type: 'MESSAGE',
       text: text,
-      senderActorId: 'A-35998790',
+      senderActorId: 'A-80554724',
       channelId: channelId,
       channelAccountId: channelAccountId,
       recipients: [
