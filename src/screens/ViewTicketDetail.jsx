@@ -237,7 +237,6 @@ const ViewTicketDetail = ({ navigation }) => {
             attachmentIds,
             channelAccountId: channelAccountId,
             channelId: channelId,
-            senderActorId: senderActorId,
           }),
         }
       );
