@@ -77,6 +77,7 @@ const handleSubmit = async () => {
     await AsyncStorage.setItem('userBio', String(result.user?.bio ?? ''));
     await AsyncStorage.setItem('userPhone', String(result.user?.phone ?? ''));
     await AsyncStorage.setItem('userGender', String(result.user?.gender ?? ''));
+    await AsyncStorage.setItem('app_support_team_member', String(result.user?.app_support_team_member ?? ''));
 
     console.log('result.user----- ', result.user);
 

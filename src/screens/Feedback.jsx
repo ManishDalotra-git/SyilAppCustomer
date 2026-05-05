@@ -14,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
+import Footer from './components/Footer';
 
 const Feedback = () => {
   StatusBar.setTranslucent(true);
@@ -23,6 +24,7 @@ const Feedback = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const currentRoute = route.name; 
+  const [appSupportTeamMember, setAppSupportTeamMember] = useState(false);
 
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -36,6 +38,16 @@ const Feedback = () => {
     const loadEmail = async () => {
       const savedEmail = await AsyncStorage.getItem('userEmail');
       if (savedEmail) setEmail(savedEmail);
+
+      const AppSupportTeamMember = await AsyncStorage.getItem('app_support_team_member');
+    console.log('AppSupportTeamMember:', AppSupportTeamMember);
+    
+
+    if(AppSupportTeamMember === 'Yes'){
+      setAppSupportTeamMember(true);
+      console.log('AppSupportTeamMember---yes:', AppSupportTeamMember);
+    }
+    
     };
     loadEmail();
   }, []);
@@ -188,94 +200,8 @@ const Feedback = () => {
       )}
 
 
-      <View style={styles.footer}>
-        <TouchableOpacity style={[
-            styles.footerItem,
-            currentRoute === 'Home' && styles.activeFooterItem,
-        ]} 
-        onPress={() => navigation.navigate('Home')}
-        >
-        <Image source={require('../../images/home.png')} style={[
-            styles.footerIcon,
-            currentRoute === 'Home' && styles.activeFooterIcon,
-            ]} />
-        <Text style={[
-            styles.footerText,
-            currentRoute === 'Home' && styles.activeFooterText,
-            ]}>Home</Text>
-        </TouchableOpacity>
+      <Footer appSupportTeamMember={appSupportTeamMember} currentRoute={currentRoute} />
 
-        <TouchableOpacity
-        style={[
-            styles.footerItem,
-            currentRoute === 'KnowledgeBase' && styles.activeFooterItem,
-        ]}
-        onPress={() => navigation.navigate('KnowledgeBase')}
-        >
-        <Image
-            source={require('../../images/knowledge.png')}
-            style={[
-            styles.footerIcon,
-            currentRoute === 'KnowledgeBase' && styles.activeFooterIcon,
-            ]}
-        />
-        <Text
-            style={[
-            styles.footerText,
-            currentRoute === 'KnowledgeBase' && styles.activeFooterText,
-            ]}
-        >
-            Knowledge
-        </Text>
-        </TouchableOpacity>
-
-
-        <TouchableOpacity style={[
-            styles.footerItem,
-            currentRoute === 'Ticket' && styles.activeFooterItem,
-        ]}
-        onPress={() => navigation.navigate('Ticket')}
-        >
-        <Image source={require('../../images/submit.png')} style={[
-            styles.footerIcon,
-            currentRoute === 'Ticket' && styles.activeFooterIcon,
-            ]} />
-        <Text style={[
-            styles.footerText,
-            currentRoute === 'Ticket' && styles.activeFooterText,
-            ]}>Submit Ticket</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[
-            styles.footerItem,
-            currentRoute === 'ViewTicket' && styles.activeFooterItem,
-        ]} 
-        onPress={() => navigation.navigate('ViewTicket')}
-        >
-        <Image source={require('../../images/view.png')} style={[
-            styles.footerIcon,
-            currentRoute === 'ViewTicket' && styles.activeFooterIcon,
-            ]} />
-        <Text style={[
-            styles.footerText,
-            currentRoute === 'ViewTicket' && styles.activeFooterText,
-            ]}>View Tickets</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[
-            styles.footerItem,
-            currentRoute === 'More' && styles.activeFooterItem,
-        ]} onPress={() => navigation.navigate('More')}> 
-        <Image source={require('../../images/more.png')} style={[
-            styles.footerIcon,
-            currentRoute === 'More' && styles.activeFooterIcon,
-            ]} />
-        <Text style={[
-            styles.footerText,
-            currentRoute === 'More' && styles.activeFooterText,
-            ]}>More</Text>
-        </TouchableOpacity>
-      </View>
     </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -361,7 +287,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
   },
-  footer: {
+  footers: {
   position: 'absolute',
   bottom: 0,
   left: 0,
@@ -376,30 +302,5 @@ const styles = StyleSheet.create({
   paddingHorizontal:16,
   boxShadow:'0 0 5px 0px #dfdfdf'
 },
-footerItem: {
-  alignItems: 'center',
-  justifyContent: 'center',
-  paddingVertical:16,
-  paddingBottom:25,
-},
-footerIcon: {
-  width: 22,
-  height: 22,
-  marginBottom: 4,
-  tintColor: '#666666',
-},
-footerText: {
-  fontSize: 12,
-  color: '#666666',
-},
-activeFooterItem:{
-  boxShadow:'0px -2px 0px 0px #FFEA00'
-},
-activeFooterIcon:{
-  tintColor: '#000',
-},
-activeFooterText:{
-  color:'#000',
-  fontWeight:500,
-},
+
 });
