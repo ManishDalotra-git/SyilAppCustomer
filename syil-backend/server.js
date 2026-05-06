@@ -718,6 +718,54 @@ app.post('/create-ticket', async (req, res) => {
 
 
 
+app.post('/get-user-data', async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const searchResponse = await fetch(
+      'https://api.hubapi.com/crm/v3/objects/contacts/search',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+        },
+        body: JSON.stringify({
+          filterGroups: [
+            {
+              filters: [
+                {
+                  propertyName: 'email',
+                  operator: 'EQ',
+                  value: email,
+                },
+              ],
+            },
+          ],
+          properties: ['app_support_team_member'],
+        }),
+      }
+    );
+
+    const data = await searchResponse.json();
+
+    if (!data.results.length) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.json({
+      app_support_team_member:
+        data.results[0].properties.app_support_team_member || '',
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
+
 
 // Step 3: check login details in hubspot
 app.post('/check_login_detail', async (req, res) => {
