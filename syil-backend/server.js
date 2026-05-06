@@ -1372,11 +1372,11 @@ app.post('/get_tickets', async (req, res) => {
 app.post('/get_owner_ticket', async (req, res) => {
   const { ownerId } = req.body;
 
-  // if (!ownerId) {
-  //   return res.status(400).json({
-  //     message: 'Owner ID is required',
-  //   });
-  // }
+  if (!ownerId) {
+    return res.status(400).json({
+      message: 'Owner ID is required',
+    });
+  }
 
   try {
     const fetch = (...args) =>
@@ -1401,7 +1401,7 @@ app.post('/get_owner_ticket', async (req, res) => {
                   {
                     propertyName: 'hubspot_owner_id',
                     operator: 'EQ',
-                    value: '35998790',
+                    value: ownerId,
                   },
                 ],
               },
