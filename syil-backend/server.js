@@ -1440,7 +1440,7 @@ app.post('/get-owner-id', async (req, res) => {
       return res.status(200).json({ ownerId: null }); // ❌ 404 ki jagah 200 return karo
     }
 
-    return res.status(200).json({ ownerId: matchedOwner.userId });
+    return res.status(200).json({ ownerId: matchedOwner.userId, OwnerUserID: matchedOwner.id });
 
   } catch (err) {
     console.error('Get owner error:', err.response?.data || err.message);
