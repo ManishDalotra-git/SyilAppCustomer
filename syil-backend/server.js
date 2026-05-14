@@ -363,8 +363,6 @@ app.post('/upload-to-hubspot', hubspotUpload.array('files'), async (req, res) =>
       success: true,
       files: uploadedFiles,
     });
-    console.log('uploadedFiles----- ' , uploadedFiles);
-    uploadedFiles.length = 0; 
   } catch (err) {
     console.log(err.response?.data || err);
     res.status(500).json({ error: 'File upload failed' });
@@ -1568,7 +1566,7 @@ app.post('/get_ticket_conversation', async (req, res) => {
 
 
 
-// app.post('/upload-to-hubspotss', upload.array('files'), async (req, res) => {
+// app.post('/upload-to-hubspot', upload.array('files'), async (req, res) => {
 //   try {
 //     const uploadedFiles = [];
 
@@ -1611,6 +1609,52 @@ app.post('/get_ticket_conversation', async (req, res) => {
 // });
 
 // ✅ Send Message to HubSpot Thread
+
+
+const uploadedFilesForViewTicket = [];
+app.post('/upload-to-hubspot-view', hubspotUpload.array('files'), async (req, res) => {
+  try {
+    const files = req.files;
+    if (!files || files.length === 0) {
+      return res.json({ success: true, files: [] });
+    }
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('file', fs.createReadStream(file.path));
+      formData.append('fileName', file.originalname);
+      formData.append('folderId', '204201997753');
+      formData.append(
+        'options',
+        JSON.stringify({ access: 'PUBLIC_INDEXABLE' })
+      );
+      const response = await axios.post(
+        'https://api.hubapi.com/files/v3/files',
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+            ...formData.getHeaders(),
+          },
+        }
+      );
+      uploadedFilesForViewTicket.push({
+        id: response.data.id,
+        url: response.data.url,
+      });
+      fs.unlinkSync(file.path);
+    }
+    res.json({
+      success: true,
+      files: uploadedFilesForViewTicket,
+    });
+    console.log('uploadedFilesForViewTicket--- ', uploadedFilesForViewTicket);
+    uploadedFilesForViewTicket.length = 0; 
+  } catch (err) {
+    console.log(err.response?.data || err);
+    res.status(500).json({ error: 'File upload failed' });
+  }
+});
+
 app.post('/send-hubspot-message', async (req, res) => {
   const { threadId, text, recipientEmail, attachmentIds, channelAccountId, channelId, senderActorId } = req.body;
 

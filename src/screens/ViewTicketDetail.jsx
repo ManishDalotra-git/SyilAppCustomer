@@ -246,7 +246,7 @@ console.log('Selected files before upload:', selectedFiles);
 
 
         const uploadRes = await fetch(
-          'https://syilapp-w8ye.onrender.com/upload-to-hubspot',
+          'https://syilapp-w8ye.onrender.com/upload-to-hubspot-view',
           {
             method: 'POST',
             body: formData,
