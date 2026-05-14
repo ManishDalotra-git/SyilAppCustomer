@@ -194,7 +194,7 @@ const ViewTicketDetail = ({ navigation }) => {
   /* ================= SEND TO CUSTOMER ================= */
   const sendToCustomer = async () => {
     if (!messageText.trim()) {
-      Alert.alert('Error', 'Message likhna zaroori hai');
+      Alert.alert('Error', 'Message is required');
       return;
     }
 
@@ -242,8 +242,11 @@ console.log('Selected files before upload:', selectedFiles);
           });
         });
 
+        console.log('formData-----  ', formData)
+
+
         const uploadRes = await fetch(
-          'https://syilapp-w8ye.onrender.com/upload-to-hubspotss',
+          'https://syilapp-w8ye.onrender.com/upload-to-hubspot',
           {
             method: 'POST',
             body: formData,
@@ -251,7 +254,7 @@ console.log('Selected files before upload:', selectedFiles);
           }
         );
 
-        console.log('Selected files before upload:', selectedFiles);
+        console.log('Selected files before upload:--- upload-to-hubspotss---  ', selectedFiles);
         const uploadData = await uploadRes.json();
 
         console.log('Upload response', uploadData);

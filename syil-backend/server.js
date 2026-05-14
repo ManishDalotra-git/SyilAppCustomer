@@ -364,6 +364,7 @@ app.post('/upload-to-hubspot', hubspotUpload.array('files'), async (req, res) =>
       files: uploadedFiles,
     });
     console.log('uploadedFiles----- ' , uploadedFiles);
+    uploadedFiles.length = 0; 
   } catch (err) {
     console.log(err.response?.data || err);
     res.status(500).json({ error: 'File upload failed' });
@@ -1567,45 +1568,47 @@ app.post('/get_ticket_conversation', async (req, res) => {
 
 
 
-app.post('/upload-to-hubspotss', upload.array('files'), async (req, res) => {
-  try {
-    const uploadedFiles = [];
+// app.post('/upload-to-hubspotss', upload.array('files'), async (req, res) => {
+//   try {
+//     const uploadedFiles = [];
 
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const formData = new FormData();
-        formData.append('file', fs.createReadStream(file.path));
-        formData.append('fileName', file.originalname);
-        formData.append('folderId', '204201997753');
-        formData.append('options', JSON.stringify({ access: 'PUBLIC_INDEXABLE' }));
+//     console.log('req.files--- ', req.files);
 
-        const response = await axios.post(
-          'https://api.hubapi.com/files/v3/files',
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${HUBSPOT_API_KEY}`,
-              ...formData.getHeaders(),
-            },
-          }
-        );
+//     if (req.files && req.files.length > 0) {
+//       for (const file of req.files) {
+//         const formData = new FormData();
+//         formData.append('file', fs.createReadStream(file.path));
+//         formData.append('fileName', file.originalname);
+//         formData.append('folderId', '204201997753');
+//         formData.append('options', JSON.stringify({ access: 'PUBLIC_INDEXABLE' }));
 
-        uploadedFiles.push({
-          id: response.data.id,
-          url: response.data.url,
-          name: file.originalname,
-        });
+//         const response = await axios.post(
+//           'https://api.hubapi.com/files/v3/files',
+//           formData,
+//           {
+//             headers: {
+//               Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+//               ...formData.getHeaders(),
+//             },
+//           }
+//         );
 
-        fs.unlinkSync(file.path); // temp file delete
-      }
-    }
+//         uploadedFiles.push({
+//           id: response.data.id,
+//           url: response.data.url,
+//           name: file.originalname,
+//         });
 
-    res.status(200).json({ files: uploadedFiles });
-  } catch (err) {
-    console.error('Upload error:', err.response?.data || err.message);
-    res.status(500).json({ error: 'File upload failed' });
-  }
-});
+//         fs.unlinkSync(file.path); // temp file delete
+//       }
+//     }
+
+//     res.status(200).json({ files: uploadedFiles });
+//   } catch (err) {
+//     console.error('Upload error:', err.response?.data || err.message);
+//     res.status(500).json({ error: 'File upload failed' });
+//   }
+// });
 
 // ✅ Send Message to HubSpot Thread
 app.post('/send-hubspot-message', async (req, res) => {
