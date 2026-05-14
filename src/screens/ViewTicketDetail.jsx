@@ -135,7 +135,7 @@ const ViewTicketDetail = ({ navigation }) => {
   const hasOutgoing = messages.some(msg => msg.direction === 'OUTGOING');
   const dynamicEmail = outgoingMessage?.senderName;
   const channelAccountId = outgoingMessage?.channelAccountId;
-  const channelId = outgoingMessage?.channelId;
+  const channelId = outgoingMessage?.channelId; 
   const conversationsThreadId = initialMessage?.conversationsThreadId;
   //const initialMessageemail = initialMessage?.senderName; 
 
