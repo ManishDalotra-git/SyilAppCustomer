@@ -1622,7 +1622,7 @@ app.post('/upload-to-hubspot-view', hubspotUpload.array('files'), async (req, re
       const formData = new FormData();
       formData.append('file', fs.createReadStream(file.path));
       formData.append('fileName', file.originalname);
-      formData.append('folderId', '204201997753');
+      formData.append('folderId', '204201997753'); 
       formData.append(
         'options',
         JSON.stringify({ access: 'PUBLIC_INDEXABLE' })

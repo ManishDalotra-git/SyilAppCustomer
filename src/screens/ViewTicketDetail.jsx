@@ -259,7 +259,7 @@ console.log('Selected files before upload:', selectedFiles);
 
         console.log('Upload response', uploadData);
 
-        attachmentIds = uploadData.files.map((f) => f.id);
+        attachmentIds = uploadData.files.map((f) => f.id); 
 
 
       }
