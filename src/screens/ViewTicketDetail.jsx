@@ -135,7 +135,7 @@ const ViewTicketDetail = ({ navigation }) => {
   const hasOutgoing = messages.some(msg => msg.direction === 'OUTGOING');
   const dynamicEmail = outgoingMessage?.senderName;
   const channelAccountId = outgoingMessage?.channelAccountId;
-  const channelId = outgoingMessage?.channelId; 
+  const channelId = outgoingMessage?.channelId;
   const conversationsThreadId = initialMessage?.conversationsThreadId;
   //const initialMessageemail = initialMessage?.senderName; 
 
@@ -243,31 +243,25 @@ console.log('Selected files before upload:', selectedFiles);
         });
 
         const uploadRes = await fetch(
-          'https://syilapp-w8ye.onrender.com/upload-to-hubspot',
+          'https://syilapp-w8ye.onrender.com/upload-to-hubspotss',
           {
             method: 'POST',
             body: formData,
             headers: { 'Content-Type': 'multipart/form-data' },
           }
         );
+
         console.log('Selected files before upload:', selectedFiles);
         const uploadData = await uploadRes.json();
+
         console.log('Upload response', uploadData);
+
         attachmentIds = uploadData.files.map((f) => f.id);
+
+
       }
 
 
-      const dataCheck = JSON.stringify({
-            threadId: conversationsThreadId,
-            text: messageText,
-            recipientEmail: incomingEmail,
-            attachmentIds,
-            channelAccountId: 597383280,
-            channelId: 1002,
-            senderActorId: senderActorId,
-          });
-
-      console.log('Data being sent to HubSpot:', dataCheck);
 
       
       const sendRes = await fetch(
@@ -280,8 +274,6 @@ console.log('Selected files before upload:', selectedFiles);
             text: messageText,
             recipientEmail: incomingEmail,
             attachmentIds,
-            channelAccountId: 597383280,
-            channelId: 1002,
             senderActorId: senderActorId,
           }),
         }

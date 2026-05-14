@@ -1567,7 +1567,7 @@ app.post('/get_ticket_conversation', async (req, res) => {
 
 
 
-app.post('/upload-to-hubspot', upload.array('files'), async (req, res) => {
+app.post('/upload-to-hubspotss', upload.array('files'), async (req, res) => {
   try {
     const uploadedFiles = [];
 
