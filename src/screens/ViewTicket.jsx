@@ -21,6 +21,7 @@ const ViewTicket = ({ navigation }) => {
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(false);
     const [appSupportTeamMember, setAppSupportTeamMember] = useState(false);
+    
 
     const [ticketType, setTicketType] = useState('me');
 
@@ -343,9 +344,15 @@ const ViewTicket = ({ navigation }) => {
                     <Picker
                     selectedValue={ticketType}
                     onValueChange={(itemValue) => setTicketType(itemValue)}
+                    style={[
+          styles.picker,
+          {
+            color: ticketType === '' ? '#999' : '#000'
+          }
+        ]}
                     >
-                    <Picker.Item label="Owned by me" value="me" />
-                    <Picker.Item label="Owned by organization" value="org" />
+                    <Picker.Item  label="Owned by me" value="me" />
+                    <Picker.Item  label="Owned by organization" value="org" />
                     </Picker>
                 </View>
             </View>

@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, ImageBackground , Pressable, Image, ScrollView, StatusBar, Platform,TouchableOpacity,  } from 'react-native'
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 //import { useNavigation } from '@react-navigation/native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect  } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Footer from './components/Footer';
 
@@ -56,31 +56,88 @@ const Home = () => {
   fetchArticles();
 }, []);
 
-useEffect(() => { 
-  const checkBellStatus = async () => {
-    const storedId = await AsyncStorage.getItem('lastSeenArticleId');
-    const AppSupportTeamMember = await AsyncStorage.getItem('app_support_team_member');
-    console.log('AppSupportTeamMember:', AppSupportTeamMember);
+
+
+useFocusEffect(
+  useCallback(() => {
+    const init = async () => {
+      try {
+        // 1️⃣ USER STATUS API CALL
+        const email = await AsyncStorage.getItem('userEmail');
+        if (!email) return;
+
+        const res = await fetch(
+          'https://syilapp-w8ye.onrender.com/get-user-data',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          }
+        );
+
+        const data = await res.json();
+
+        console.log('API AppSupportTeamMember:', data.app_support_team_member);
+
+        let supportValue = 'No';
+
+        if (data.app_support_team_member === 'Yes') {
+          setAppSupportTeamMember(true);
+          supportValue = 'Yes';
+        } else {
+          setAppSupportTeamMember(false);
+        }
+
+        await AsyncStorage.setItem('app_support_team_member', supportValue);
+
+        // 2️⃣ BELL STATUS CHECK (API ke baad)
+        const storedId = await AsyncStorage.getItem('lastSeenArticleId');
+
+        if (!latestId) return;
+
+        if (storedId !== latestId) {
+          setShowBell(true);
+        } else {
+          setShowBell(false);
+        }
+
+      } catch (err) {
+        console.log('Init error:', err);
+      }
+    };
+
+    init();
+  }, [latestId]) // 👈 important
+);
+
+
+
+// useEffect(() => { 
+//   const checkBellStatus = async () => {
+
+//     const storedId = await AsyncStorage.getItem('lastSeenArticleId');
+//     const AppSupportTeamMember = await AsyncStorage.getItem('app_support_team_member');
+//     console.log('AppSupportTeamMember:', AppSupportTeamMember);
     
 
-    if(AppSupportTeamMember === 'Yes'){
-      setAppSupportTeamMember(true);
-      console.log('AppSupportTeamMember---yes:', AppSupportTeamMember);
-    }
+//     if(AppSupportTeamMember === 'Yes'){
+//       setAppSupportTeamMember(true);
+//       console.log('AppSupportTeamMember---yes:', AppSupportTeamMember);
+//     }
 
     
 
-    if (!latestId) return;
+//     if (!latestId) return;
 
-    if (storedId !== latestId) {
-      setShowBell(true);
-    } else {
-      setShowBell(false);
-    }
-  };
+//     if (storedId !== latestId) {
+//       setShowBell(true);
+//     } else {
+//       setShowBell(false);
+//     }
+//   };
 
-  checkBellStatus();
-}, [latestId]);
+//   checkBellStatus();
+// }, [latestId]);
 
 
   return (

@@ -23,6 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Footer from './components/Footer';
+import Video from 'react-native-video';
 
 const ViewTicketDetail = ({ navigation }) => {
   StatusBar.setTranslucent(true);
@@ -135,13 +136,16 @@ const ViewTicketDetail = ({ navigation }) => {
   const dynamicEmail = outgoingMessage?.senderName;
   const channelAccountId = outgoingMessage?.channelAccountId;
   const channelId = outgoingMessage?.channelId;
-  const conversationsThreadId = outgoingMessage?.conversationsThreadId;
+  const conversationsThreadId = initialMessage?.conversationsThreadId;
+  //const initialMessageemail = initialMessage?.senderName; 
+
+  console.log('Initial Message:', conversationsThreadId);
 
   const incomingMessage = [...messages]
     .reverse()
     .find(msg => msg.direction === 'INCOMING' && msg.senderName?.includes('@'));
 
-  const incomingEmail = incomingMessage?.senderName;
+  const incomingEmail = initialMessage?.senderName;
   const incomingSubject = incomingMessage?.subject;
 
   const hasOutgoings = messages.filter(msg => msg.direction === 'OUTGOING').length;
@@ -176,6 +180,8 @@ const ViewTicketDetail = ({ navigation }) => {
             type: asset.type || 'image/jpeg',
           }));
           setSelectedFiles((prev) => [...prev, ...files]);
+          setSelectedFiles(files);
+          console.log('Selected files:', files);
         }
       }
     );
@@ -196,14 +202,13 @@ const ViewTicketDetail = ({ navigation }) => {
     try {
       let attachmentIds = [];
 
-
       const ownerRes = await fetch(
-  'https://syilapp-w8ye.onrender.com/get-owner-id',
-  {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: email }),
-  }
+      'https://syilapp-w8ye.onrender.com/get-owner-id',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email }),
+      }
 );
 
 const ownerRaw = await ownerRes.text();
@@ -224,6 +229,9 @@ console.log('SenderActorId---- ', senderActorId);
 
 
 
+console.log('Selected files before upload:', selectedFiles);
+
+
       if (selectedFiles.length > 0) {
         const formData = new FormData();
         selectedFiles.forEach((file) => {
@@ -242,9 +250,24 @@ console.log('SenderActorId---- ', senderActorId);
             headers: { 'Content-Type': 'multipart/form-data' },
           }
         );
+        console.log('Selected files before upload:', selectedFiles);
         const uploadData = await uploadRes.json();
+        console.log('Upload response', uploadData);
         attachmentIds = uploadData.files.map((f) => f.id);
       }
+
+
+      const dataCheck = JSON.stringify({
+            threadId: conversationsThreadId,
+            text: messageText,
+            recipientEmail: incomingEmail,
+            attachmentIds,
+            channelAccountId: 597383280,
+            channelId: 1002,
+            senderActorId: senderActorId,
+          });
+
+      console.log('Data being sent to HubSpot:', dataCheck);
 
       
       const sendRes = await fetch(
@@ -257,14 +280,16 @@ console.log('SenderActorId---- ', senderActorId);
             text: messageText,
             recipientEmail: incomingEmail,
             attachmentIds,
-            channelAccountId: channelAccountId,
-            channelId: channelId,
+            channelAccountId: 597383280,
+            channelId: 1002,
             senderActorId: senderActorId,
           }),
         }
       );
 
       const sendData = await sendRes.json();
+
+      console.log('Send response', sendData);
 
       if (sendData.success) {
         Alert.alert('Success', 'Message sent successfully!');
@@ -367,21 +392,35 @@ console.log('SenderActorId---- ', senderActorId);
                 <Text style={styles.messageText}>{item.text || ''}</Text>
 
                 {item.attachments && item.attachments.length > 0 && (
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      flexWrap: 'wrap',
-                      marginTop: 5,
-                    }}
-                  >
-                    {item.attachments.map((attachment, index) => (
-                      <Image
-                        key={index}
-                        source={{ uri: attachment.url }}
-                        style={styles.attachmentImage}
-                      />
-                    ))}
-                  </View>
+                  <View style={{ marginTop: 5 }}>
+    {item.attachments.map((attachment, index) => {
+      
+      if (attachment.fileUsageType === 'IMAGE') {
+        return (
+          <Image
+            key={index}
+            source={{ uri: attachment.url }}
+            style={styles.attachmentImage}
+          />
+        );
+      }
+
+      if (attachment.fileUsageType === 'OTHER') {
+        return (
+          <Video
+            key={index}
+            source={{ uri: attachment.url }}
+            style={styles.video}
+            controls={true}
+            resizeMode="contain"
+            paused={true} 
+          />
+        );
+      }
+
+      return null;
+    })}
+  </View>
                 )}
               </View>
             )}
@@ -395,11 +434,15 @@ console.log('SenderActorId---- ', senderActorId);
           )}
 
           
-          {isChen ? (
+          {appSupportTeamMember === true ? (
            
             <TouchableOpacity
               style={styles.ReplyStyle}
-              onPress={() => setReplyModalVisible(true)}
+              onPress={() => {
+  setSelectedFiles([]);
+  setMessageText('');
+  setReplyModalVisible(true);
+}}
             >
               <Text style={{ color: '#fff', textAlign: 'center', fontWeight: '500', fontSize: 16 }}>
                 Reply to Customer
@@ -589,6 +632,12 @@ const styles = StyleSheet.create({
     objectFit: 'contain',
     resizeMode: 'contain',
   },
+   video: {
+  width: '100%',
+  height: 220,
+  borderRadius: 8,
+  marginTop: 5,
+},
 
   // ✅ Modal Styles
   modalOverlay: {

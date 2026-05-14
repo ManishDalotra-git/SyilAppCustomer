@@ -32,7 +32,7 @@ app.post('/ask-alex', async (req, res) => {
   const { question } = req.body;
   console.log('question---- ', question);
   try {
-    // const { question } = req.body;
+    
      console.log('question----try00 ', question);
     if (!question) {
       return res.status(400).json({ error: 'Question is required' });
@@ -135,7 +135,7 @@ app.post('/ask-alex', async (req, res) => {
       }
     );
 
-    // 🔹 Extract message block
+    
     const messageBlock = response.data.output.find(
       o => o.type === 'message'
     );
@@ -144,7 +144,7 @@ app.post('/ask-alex', async (req, res) => {
     const text = content.text || '';
     const annotations = content.annotations || [];
 
-    // 🔹 Only FIRST title
+      
     const title =
       annotations.length > 0 && annotations[0].title
         ? annotations[0].title
@@ -198,10 +198,9 @@ app.get('/articles', (req, res) => {
 
 
 
-// storage config for multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // temporary folder
+    cb(null, 'uploads/'); 
   },
   filename: function (req, file, cb) {
     cb(null, file.originalname);
@@ -218,15 +217,12 @@ const upload = multer({
   }
 });
 
-// endpoint to upload JSON
 app.post('/upload-articles', upload.single('file'), (req, res) => {
   const tempPath = req.file.path;
   const targetPath = path.join(__dirname, 'assets', 'articles.json');
 
   fs.readFile(tempPath, 'utf8', (err, data) => {
     if (err) return res.status(500).json({ message: 'Error reading file' });
-
-    // optional: validate JSON
     try {
       JSON.parse(data);
     } catch (e) {
@@ -236,7 +232,6 @@ app.post('/upload-articles', upload.single('file'), (req, res) => {
     fs.writeFile(targetPath, data, 'utf8', (err) => {
       if (err) return res.status(500).json({ message: 'Error saving file' });
 
-      // delete temp file
       fs.unlinkSync(tempPath);
 
       res.json({ message: 'articles.json updated successfully' });
@@ -247,12 +242,6 @@ app.post('/upload-articles', upload.single('file'), (req, res) => {
 
 
 
-
-
-
-
-
-// Step 1: Search contact by email
 app.post('/get-contact-id', async (req, res) => {
   const { email } = req.body;
 
@@ -264,7 +253,6 @@ app.post('/get-contact-id', async (req, res) => {
     const fetch = (...args) =>
       import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
-    // 1️⃣ SEARCH CONTACT
     const searchResponse = await fetch(
       'https://api.hubapi.com/crm/v3/objects/contacts/search',
       {
@@ -1638,8 +1626,8 @@ app.post('/send-hubspot-message', async (req, res) => {
       type: 'MESSAGE',
       text: text,
       senderActorId: senderActorId,
-      channelId: channelId,
-      channelAccountId: channelAccountId,
+      channelId: '1002',
+      channelAccountId: '597383280',
       recipients: [
         {
           recipientField: 'TO',

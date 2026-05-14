@@ -72,9 +72,43 @@ const OwnerTickets = ({ navigation }) => {
 
   useFocusEffect(
     useCallback(() => {
+
+      if (!email) return;
+
+
       const fetchTickets = async () => {
         try {
           setLoading(true);
+
+console.log('email-----email---- ' , email);
+
+          const ownerRes = await fetch(
+      'https://syilapp-w8ye.onrender.com/get-owner-id',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email }),
+      }
+);
+
+const ownerRaw = await ownerRes.text();
+console.log('Owner RAW response:', ownerRaw);
+console.log('Owner status:', ownerRes.status);
+
+const ownerData = JSON.parse(ownerRaw);
+console.log('ownerId mila:', ownerData.OwnerUserID);
+
+const senderActorId = ownerData.OwnerUserID
+  ? `${ownerData.OwnerUserID}`
+  : '35998790';
+
+console.log('Final senderActorId:', senderActorId);
+
+// setSenderActorId(senderActorId)
+// console.log('SenderActorId---- ', senderActorId);
+
+
+
 
           //http://192.168.0.84:3000/
           //https://syilapp-w8ye.onrender.com/get_owner_tickets
@@ -85,7 +119,10 @@ const OwnerTickets = ({ navigation }) => {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-              }
+              },
+              body: JSON.stringify({
+                ownerId: senderActorId || '35998790',
+                }),
             }
           );
 
@@ -102,7 +139,7 @@ const OwnerTickets = ({ navigation }) => {
       };
 
       fetchTickets();
-    }, [ownerId])
+    }, [ownerId, email])
   );
 
   const formatDate = (dateString) => {
