@@ -125,8 +125,12 @@ const KnowledgeBase = ({ navigation }) => {
 useEffect(() => {
   const fetchArticles = async () => {
     try {
+
+      // http://192.168.0.41:3000/
+      // https://syilapp-w8ye.onrender.com
+
       const response = await fetch(
-        'https://syilapp-w8ye.onrender.com/articles'
+        'http://192.168.0.41:3000/articles'
       );
       const data = await response.json();
 

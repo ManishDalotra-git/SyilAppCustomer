@@ -1,4 +1,4 @@
-package com.syilreact.dealer
+package com.syilreact.customer
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

@@ -1,4 +1,4 @@
-package com.syilreact.dealer
+package com.syilreact.customer
 
 import android.app.Application
 import com.facebook.react.PackageList

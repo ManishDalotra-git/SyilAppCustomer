@@ -31,10 +31,11 @@ const handleSubmit = async () => {
   setLoading(true);
 
   // https://syilapp-w8ye.onrender.com/check_login_detail
+  // http://192.168.0.91:3000/
 
   try {
       const response = await fetch(
-        'https://syilapp-w8ye.onrender.com/check_login_detail',
+        'http://192.168.0.41:3000/check_login_detail',
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

@@ -77,13 +77,13 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.syilreact.dealer"
+    namespace "com.syilreact.customer"
     defaultConfig {
-        applicationId "com.syilreact.dealer"
+        applicationId "com.syilreact.customer"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 7
-        versionName "1.7"
+        versionCode 1
+        versionName "1.0"
     }
     signingConfigs {
         debug {

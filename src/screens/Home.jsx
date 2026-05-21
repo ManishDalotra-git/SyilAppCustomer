@@ -23,7 +23,10 @@ const Home = () => {
   useEffect(() => {
   const fetchArticles = async () => {
     try {
-      const res = await fetch('https://syilapp-w8ye.onrender.com/articles');
+
+      // http://192.168.0.91:3000/
+      // https://syilapp-w8ye.onrender.com
+      const res = await fetch('http://192.168.0.91:3000/articles');
       const data = await res.json();
 
       // const count = data.filter(item => {
@@ -66,8 +69,11 @@ useFocusEffect(
         const email = await AsyncStorage.getItem('userEmail');
         if (!email) return;
 
+        // http://192.168.0.41:3000/
+      // https://syilapp-w8ye.onrender.com
+
         const res = await fetch(
-          'https://syilapp-w8ye.onrender.com/get-user-data',
+          'http://192.168.0.41:3000/get-user-data',
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -178,7 +184,7 @@ useFocusEffect(
   )}
 </View>
 
-      <Text style={styles.welcome}>Dealer Portal</Text>
+      <Text style={styles.welcome}>Customer Portal</Text>
 
       <Pressable onPress={() => navigation.navigate('KnowledgeBase')} style={styles.card}>
         <View style={styles.cardFlex} >
