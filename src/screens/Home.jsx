@@ -26,7 +26,7 @@ const Home = () => {
 
       // http://192.168.0.91:3000/
       // https://syilapp-w8ye.onrender.com
-      const res = await fetch('http://192.168.0.91:3000/articles');
+      const res = await fetch('http://192.168.0.32:3000/articles');
       const data = await res.json();
 
       // const count = data.filter(item => {
@@ -73,7 +73,7 @@ useFocusEffect(
       // https://syilapp-w8ye.onrender.com
 
         const res = await fetch(
-          'http://192.168.0.41:3000/get-user-data',
+          'http://192.168.0.32:3000/get-user-data',
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -113,7 +113,7 @@ useFocusEffect(
     };
 
     init();
-  }, [latestId]) // 👈 important
+  }, [latestId])
 );
 
 

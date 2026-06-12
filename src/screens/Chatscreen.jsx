@@ -52,7 +52,7 @@ const Chatscreen = () => {
 
       {/* WEBVIEW */}
       <WebView
-        source={{ uri: 'https://syil.com/mobile-chat-support-for-kb' }}
+        source={{ uri: 'https://syil.com/mobile-chat-support-for-kb-customer-portal' }}
 
         javaScriptEnabled={true}
         domStorageEnabled={true}

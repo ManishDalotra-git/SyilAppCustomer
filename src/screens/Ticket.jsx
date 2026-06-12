@@ -132,7 +132,7 @@ const formatCategoryLabel = (key) => {
     Operating_issue: false,
     Quality_issue: false,
     Shipping_issue: false,
-    FEATURE_REQUEST: false,
+    // FEATURE_REQUEST: false,
   });
 
   const [warranty, setWarranty] = useState(false);
@@ -169,7 +169,11 @@ const formatCategoryLabel = (key) => {
       });
     });
 
-    const res = await fetch('https://syilapp-w8ye.onrender.com/upload-to-hubspot', {
+    
+    // http://192.168.0.58:3000/
+    // https://syilapp-w8ye.onrender.com
+
+    const res = await fetch('http://192.168.0.32:3000/upload-to-hubspot', {
       method: 'POST',
       body: formData,
       headers: {
@@ -234,8 +238,12 @@ const formatCategoryLabel = (key) => {
         files,
       };
 
+
+    // http://192.168.0.58:3000/
+    // https://syilapp-w8ye.onrender.com
+
       try {
-        const responseEmail = await fetch('https://syilapp-w8ye.onrender.com/get-contact-id', {
+        const responseEmail = await fetch('http://192.168.0.32:3000/get-contact-id', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: ticketData.email }),
@@ -258,10 +266,11 @@ const formatCategoryLabel = (key) => {
         return;
       }
 
-
+    // http://192.168.0.58:3000/
+    // https://syilapp-w8ye.onrender.com
 
       // 2️⃣ Create Ticket
-      const responseTicket = await fetch('https://syilapp-w8ye.onrender.com/create-ticket', {
+      const responseTicket = await fetch('http://192.168.0.32:3000/create-ticket', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contactId, ticketData }),
@@ -369,8 +378,8 @@ const formatCategoryLabel = (key) => {
         <Text style={styles.errorText}>{errors.email}</Text>
       )}
 
-      <Text style={styles.label}>On Behalf of End-Customer (Company) Name</Text>
-      <Text>Enter the (company) name of the end-customer that is having the issue</Text>
+      <Text style={styles.label}>Company name</Text>
+      {/* <Text>Enter the (company) name of the end-customer that is having the issue</Text> */}
       <TextInput
         style={styles.input}
         value={company}

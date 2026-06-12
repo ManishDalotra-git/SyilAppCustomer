@@ -91,6 +91,7 @@ const styles = StyleSheet.create({
     height: 22,
     marginBottom: 4,
     tintColor: '#666',
+    objectFit: 'contain',
   },
   footerText: {
     fontSize: 12,

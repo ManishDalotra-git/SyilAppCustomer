@@ -70,67 +70,15 @@ const KnowledgeBase = ({ navigation }) => {
   );
 
 
-
-  // ✅ Load data from JSON instead of CSV
-  // useEffect(() => {
-  //   const cleanData = articlesData.filter(
-  //     item => item['Article title'] && item['Article body']
-  //   );
-
-  //   setArticles(cleanData);
-  //   setLoading(false);
-  // }, []);
-
-
-
-
-  
-// useEffect(() => {
-//   const loadArticles = async () => {
-//     try {
-//       const filePath = `${RNFS.DocumentDirectoryPath}/articles.json`;
-
-//       // Check if file exists
-//       const exists = await RNFS.exists(filePath);
-//       let rawData = null;
-
-//       if (exists) {
-//         const content = await RNFS.readFile(filePath, 'utf8');
-//         rawData = JSON.parse(content);
-//       } else {
-//         // fallback to bundled JSON import
-//         rawData = articlesData;
-//       }
-
-//       const cleanData = rawData.filter(
-//         item => item['Article title'] && item['Article body']
-//       );
-
-//       setArticles(cleanData);
-//       setLoading(false);
-//     } catch (error) {
-//       console.error('Failed to load articles:', error);
-//       // fallback to bundled JSON import on error
-//       const cleanData = articlesData.filter(
-//         item => item['Article title'] && item['Article body']
-//       );
-//       setArticles(cleanData);
-//       setLoading(false);
-//     }
-//   };
-
-//   loadArticles();
-// }, []);
-
 useEffect(() => {
   const fetchArticles = async () => {
     try {
 
-      // http://192.168.0.41:3000/
+      // http://192.168.0.58:3000/
       // https://syilapp-w8ye.onrender.com
 
       const response = await fetch(
-        'http://192.168.0.41:3000/articles'
+        'http://192.168.0.32:3000/articles'
       );
       const data = await response.json();
 
@@ -149,10 +97,6 @@ useEffect(() => {
     } catch (err) {
       console.log('Fetch error:', err);
 
-      // fallback (offline safety)
-      // const cleanData = articlesData.filter(
-      //   item => item['Article title'] && item['Article body']
-      // );
       const cleanData = articlesData
   .filter(item => item['Article title'] && item['Article body'])
   .map(item => ({
@@ -175,71 +119,22 @@ useEffect(() => {
 }, [route.params]);
 
 
-  // ✅ Categories (same logic)
-  // const categories = useMemo(() => {
-  //   const unique = [...new Set(articles.map(a => a.Category))];
-  //   return unique;
-  //   //return unique.slice(0, 10);
-  // }, [articles]);
-
-
-
-
-
-
 
     const categories = useMemo(() => {
   const unique = [...new Set(articles.map(a => a.Category))];
 
   return unique
-    .filter(Boolean) // null/undefined remove
+    .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
 }, [articles]);
 
 
 
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'new'
+  const [activeTab, setActiveTab] = useState('all');
 
   const hasNewArticles = useMemo(() => {
   return articles.some(item => item.newArticle === true);
 }, [articles]);
-
-
-  // ✅ Search + Category filter (unchanged)
-  // const filteredArticles = useMemo(() => {
-  // const filtered = articles.filter(item => {
-  //   const matchSearch =
-  //     item['Article title']
-  //       ?.toLowerCase()
-  //       .includes(search.toLowerCase());
-
-  //   const matchCategory = selectedCategory
-  //     ? item.Category === selectedCategory
-  //     : true;
-
-  //   return matchSearch && matchCategory;
-  // });
-
-  //   return filtered.sort((a, b) => {
-  //     const titleA = (a['Article title'] || '').trim();
-  //     const titleB = (b['Article title'] || '').trim();
-
-  //     const numA = parseInt(titleA.match(/^\d+/)?.[0], 10);
-  //     const numB = parseInt(titleB.match(/^\d+/)?.[0], 10);
-
-  //     const hasNumA = !isNaN(numA);
-  //     const hasNumB = !isNaN(numB);
-
-  //     if (hasNumA && hasNumB) {
-  //       return numA - numB;
-  //     }
-
-  //     if (!hasNumA && hasNumB) return -1;
-  //     if (hasNumA && !hasNumB) return 1;
-
-  //     return titleA.localeCompare(titleB);
-  //   });
-  // }, [articles, search, selectedCategory]);
 
 
   const filteredArticles = useMemo(() => {
@@ -417,8 +312,6 @@ useEffect(() => {
 
           
 
-          {/* <Text style={styles.popularTitle}>Articles</Text> */}
-
           {hasNewArticles && (
   <View style={styles.tabContainer}>
     <TouchableOpacity
@@ -541,8 +434,8 @@ const styles = StyleSheet.create({
   },
   articleIcon: { width: 41, height: 41, marginRight: 8 },
   Leftarrow: { width: 11.86, height: 21.21 },
-  articleTitle: { fontSize: 14, fontWeight: '600', color: '#000' },
-  articleSub: { fontSize: 12, color: '#777' },
+  articleTitle: { fontSize: 14, fontWeight: '600', color: '#000', paddingRight:10, },
+  articleSub: { fontSize: 12, color: '#777', paddingRight:10, },
 
   loaderContainer: {
     flex: 1,
@@ -597,7 +490,5 @@ activeTabText: {
   color: '#000',
   fontWeight: '600',
 },
-
-
 
 });

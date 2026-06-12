@@ -83,7 +83,7 @@ const OwnerTickets = ({ navigation }) => {
 console.log('email-----email---- ' , email);
 
           const ownerRes = await fetch(
-      'https://syilapp-w8ye.onrender.com/get-owner-id',
+      'http://192.168.0.32:3000/get-owner-id',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -114,7 +114,7 @@ console.log('Final senderActorId:', senderActorId);
           //https://syilapp-w8ye.onrender.com/get_owner_tickets
 
           const response = await fetch(
-            'https://syilapp-w8ye.onrender.com/get_owner_ticket',
+            'http://192.168.0.32:3000/get_owner_ticket',
             {
               method: 'POST',
               headers: {
@@ -139,7 +139,7 @@ console.log('Final senderActorId:', senderActorId);
       };
 
       fetchTickets();
-    }, [ownerId, email])
+    }, [ownerId, email]) 
   );
 
   const formatDate = (dateString) => {
@@ -352,7 +352,12 @@ console.log('Final senderActorId:', senderActorId);
             )}
 
             <FlatList
-              data={tickets}
+              //data={tickets}
+              data={tickets.filter(
+                  item =>
+                      item.customer_portal === 'True' ||
+                      item.customer_portal === true
+              )}
               keyExtractor={(item) => item.ticketId}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{
@@ -382,8 +387,12 @@ console.log('Final senderActorId:', senderActorId);
               )}
             />
 
-            {!loading && tickets.length === 0 && (
+            {/* {!loading && tickets.length === 0 && (
               <Text style={styles.noTicketText}>No tickets found</Text>
+            )} */}
+            {!loading &&
+            tickets.filter(item => item.customer_portal === 'True').length === 0 && (
+                <Text style={styles.noTicketText}>No tickets found</Text>
             )}
           </View>
         </View>

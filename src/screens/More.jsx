@@ -197,6 +197,14 @@ const More = ({ navigation }) => {
                 <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
             </TouchableOpacity>
 
+            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('CustomerNewsListing')} >
+                <View style={styles.left}>
+                <Image source={require('../../images/customer_listing_blog.png')} style={styles.icon} />
+                <Text style={styles.text}>Customer News</Text>
+                </View>
+                <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
+            </TouchableOpacity>
+
         </View>
     </View>
 

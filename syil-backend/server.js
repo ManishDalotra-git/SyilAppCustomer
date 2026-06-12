@@ -403,7 +403,7 @@ app.post('/create-ticket', async (req, res) => {
 
       { objectTypeId: '0-5', name: 'subject', value: subject || '' },
       { objectTypeId: '0-5', name: 'content', value: description || '' },
-      { objectTypeId: '0-5', name: 'end_customer_name', value: company || '' },
+      { objectTypeId: '0-5', name: 'company', value: company || '' },
       { objectTypeId: '0-5', name: 'machine_type', value: machineType || '' },
       { objectTypeId: '0-5', name: 'controller', value: controller || '' },
       { objectTypeId: '0-5', name: 'machine_serial_number', value: serialNo || '' },
@@ -428,6 +428,11 @@ app.post('/create-ticket', async (req, res) => {
         name: 'source_status',
         value: 'Mobile',
       },
+      {
+        objectTypeId: '0-5',
+        name: 'customer_portal',
+        value: 'True',
+      },
     ];
 
   
@@ -445,7 +450,7 @@ app.post('/create-ticket', async (req, res) => {
           });
         }
 
-    const formUrl = 'https://api.hsforms.com/submissions/v3/integration/submit/4392290/d3c790a4-c601-4a54-b826-0a5ca3f57428';
+    const formUrl = 'https://api.hsforms.com/submissions/v3/integration/submit/4392290/6cfd4e04-60e6-42ae-aea8-5e3825d8c7c0';
 
 
     console.log('fields---- ' , fields);
@@ -468,6 +473,9 @@ app.post('/create-ticket', async (req, res) => {
 
     const fetch = (...args) =>
       import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+    
+    await new Promise(resolve => setTimeout(resolve, 15000));
 
     const searchResponse = await fetch(
       'https://api.hubapi.com/crm/v3/objects/contacts/search',
@@ -1321,7 +1329,7 @@ app.post('/get_tickets', async (req, res) => {
     // ============================
     const ticketPromises = ticketIds.map(ticketId =>
       fetch(
-        `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=subject,createdate,hubspot_owner_id,hs_pipeline_stage`,
+        `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=subject,createdate,hubspot_owner_id,hs_pipeline_stage,customer_portal`,
         {
           method: 'GET',
           headers: {
@@ -1340,6 +1348,7 @@ app.post('/get_tickets', async (req, res) => {
       createdDate: ticket.properties.createdate || '',
       ownerId: ticket.properties.hubspot_owner_id || '',
       status: ticket.properties.hs_pipeline_stage || '',
+      customer_portal: ticket.properties.customer_portal || '',
     }));
 
     return res.status(200).json({
@@ -1394,7 +1403,7 @@ app.post('/get_owner_ticket', async (req, res) => {
               },
             ],
             limit: 100,
-            after: after, // 👈 pagination cursor
+            after: after,
             properties: [
               'subject',
               'content',
@@ -1402,6 +1411,7 @@ app.post('/get_owner_ticket', async (req, res) => {
               'hs_pipeline_stage',
               'hubspot_owner_id',
               'createdate',
+              'customer_portal',
             ],
             sorts: ['createdate'],
           }),
@@ -1424,6 +1434,7 @@ app.post('/get_owner_ticket', async (req, res) => {
       ownerId: item.properties.hubspot_owner_id || '',
       status: item.properties.hs_pipeline_stage || '',
       content: item.properties.content || '',
+      customer_portal: item.properties.customer_portal || '',
     }));
 
     return res.status(200).json({
@@ -1656,7 +1667,7 @@ app.post('/upload-to-hubspot-view', hubspotUpload.array('files'), async (req, re
 });
 
 app.post('/send-hubspot-message', async (req, res) => {
-  const { threadId, text, recipientEmail, attachmentIds, channelAccountId, channelId, senderActorId } = req.body;
+  const { threadId, text, recipientEmail, attachmentIds, channelAccountId, channelId, senderActorId, subject } = req.body;
 
   console.log('=== send-hubspot-message hit ===');
   console.log('threadId:', threadId);
@@ -1666,12 +1677,14 @@ app.post('/send-hubspot-message', async (req, res) => {
   console.log('channelAccountId:', channelAccountId);
   console.log('channelId:', channelId);
   console.log('senderActorId received:', senderActorId);
+  console.log('subject:', subject);
 
   try {
     // ✅ Postman format exactly match
     const body = {
       type: 'MESSAGE',
       text: text,
+      subject: subject,
       senderActorId: senderActorId,
       channelId: '1002',
       channelAccountId: '597383280',
@@ -1711,7 +1724,32 @@ app.post('/send-hubspot-message', async (req, res) => {
     return res.status(500).json({ error: 'Message send failed', detail: err.response?.data });
   }
 });
+   
 
+app.get('/customer-news', async (req, res) => {  
+  try {
+    const response = await fetch(
+      'https://api.hubapi.com/cms/v3/blogs/posts?contentGroupId__eq=189594723724',
+      {
+        method: 'GET',
+        headers: { 
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    res.json(data);
+  } catch (error) {
+    console.log('Customer News Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Something went wrong',
+    });
+  }
+});
  
 
 

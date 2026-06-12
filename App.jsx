@@ -18,6 +18,8 @@ import ViewTicketDetail from './src/screens/ViewTicketDetail';
 import UploadArticles from './src/screens/UploadArticles';
 import OwnerTickets from './src/screens/OwnerTickets';
 import Chatscreen from './src/screens/Chatscreen';
+import CustomerNewsListing from './src/screens/CustomerNewsListing';
+import CustomerNewsDetail from './src/screens/CustomerNewsDetail';
 
 import { NavigationContainer } from '@react-navigation/native';
 
@@ -44,6 +46,8 @@ const App = () => {
         <Stack.Screen name="UploadArticles" component={UploadArticles} options={{ headerShown: false }} />
         <Stack.Screen name="OwnerTickets" component={OwnerTickets} options={{ headerShown: false }} />
         <Stack.Screen name="Chatscreen" component={Chatscreen} options={{ headerShown: false }} />
+        <Stack.Screen name="CustomerNewsListing" component={CustomerNewsListing} options={{ headerShown: false }} />
+        <Stack.Screen name="CustomerNewsDetail" component={CustomerNewsDetail} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   )
