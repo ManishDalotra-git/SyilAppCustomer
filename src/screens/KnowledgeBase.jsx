@@ -78,7 +78,7 @@ useEffect(() => {
       // https://syilapp-w8ye.onrender.com
 
       const response = await fetch(
-        'http://192.168.0.32:3000/articles'
+        'https://syilappcustomer.onrender.com/articles'
       );
       const data = await response.json();
 

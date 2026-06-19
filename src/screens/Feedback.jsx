@@ -65,7 +65,7 @@ const Feedback = () => {
     try {
       setLoading(true);
 
-      const response = await fetch('http://192.168.0.32:3000/submit-feedback', {
+      const response = await fetch('https://syilappcustomer.onrender.com/submit-feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subject, message, rating, email }),

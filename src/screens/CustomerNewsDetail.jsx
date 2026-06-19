@@ -72,7 +72,7 @@ const CustomerNewsDetail = ({ route, navigation }) => {
       setLoading(true);
 
       const response = await fetch(
-        'http://192.168.0.32:3000/customer-news'
+        'https://syilappcustomer.onrender.com/customer-news'
       );
 
       const data = await response.json();

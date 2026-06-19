@@ -22,7 +22,7 @@ const UploadArticle = ({ navigation }) => {
   StatusBar.setBarStyle('dark-content');
 
 
-  const API_URL = 'http://192.168.0.32:3000/upload-articles';
+  const API_URL = 'https://syilappcustomer.onrender.com/upload-articles';
 
 
   const handleSelectFile = async () => {

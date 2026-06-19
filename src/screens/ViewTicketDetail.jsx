@@ -87,7 +87,7 @@ const ViewTicketDetail = ({ navigation }) => {
         try {
           setLoading(true);
           const response = await fetch(
-            'http://192.168.0.32:3000/get_ticket_conversation',
+            'https://syilappcustomer.onrender.com/get_ticket_conversation',
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -112,7 +112,7 @@ const ViewTicketDetail = ({ navigation }) => {
     try {
       if (!ticketId) return;
       const response = await fetch(
-        'http://192.168.0.32:3000/get_ticket_conversation',
+        'https://syilappcustomer.onrender.com/get_ticket_conversation',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }, 
@@ -203,7 +203,7 @@ const ViewTicketDetail = ({ navigation }) => {
       let attachmentIds = [];
 
       const ownerRes = await fetch(
-      'http://192.168.0.32:3000/get-owner-id',
+      'https://syilappcustomer.onrender.com/get-owner-id',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -246,7 +246,7 @@ console.log('Selected files before upload:', selectedFiles);
 
 
         const uploadRes = await fetch(
-          'http://192.168.0.32:3000/upload-to-hubspot-view',
+          'https://syilappcustomer.onrender.com/upload-to-hubspot-view',
           {
             method: 'POST',
             body: formData,
@@ -268,7 +268,7 @@ console.log('Selected files before upload:', selectedFiles);
 
       
       const sendRes = await fetch(
-        'http://192.168.0.32:3000/send-hubspot-message',
+        'https://syilappcustomer.onrender.com/send-hubspot-message',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

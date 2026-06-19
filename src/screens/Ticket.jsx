@@ -173,7 +173,7 @@ const formatCategoryLabel = (key) => {
     // http://192.168.0.58:3000/
     // https://syilapp-w8ye.onrender.com
 
-    const res = await fetch('http://192.168.0.32:3000/upload-to-hubspot', {
+    const res = await fetch('https://syilappcustomer.onrender.com/upload-to-hubspot', {
       method: 'POST',
       body: formData,
       headers: {
@@ -243,7 +243,7 @@ const formatCategoryLabel = (key) => {
     // https://syilapp-w8ye.onrender.com
 
       try {
-        const responseEmail = await fetch('http://192.168.0.32:3000/get-contact-id', {
+        const responseEmail = await fetch('https://syilappcustomer.onrender.com/get-contact-id', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: ticketData.email }),
@@ -270,7 +270,7 @@ const formatCategoryLabel = (key) => {
     // https://syilapp-w8ye.onrender.com
 
       // 2️⃣ Create Ticket
-      const responseTicket = await fetch('http://192.168.0.32:3000/create-ticket', {
+      const responseTicket = await fetch('https://syilappcustomer.onrender.com/create-ticket', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contactId, ticketData }),
