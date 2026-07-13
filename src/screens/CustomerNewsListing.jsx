@@ -182,12 +182,12 @@ const CustomerNewsListing = ({ navigation }) => {
       {loading ? (
         <ActivityIndicator
           size="large"
-          color="#000"
+          color="#000"x
         />
       ) : (
         <FlatList
-          data={filteredNews}
-          //data={filteredNews.filter(item => item.currentState === 'PUBLISHED')}
+          //data={filteredNews}
+          data={filteredNews.filter(item => item.currentState === 'PUBLISHED')}
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
@@ -202,8 +202,6 @@ const CustomerNewsListing = ({ navigation }) => {
         />
       )}
       </View>
-
-      
 
     </View>
 

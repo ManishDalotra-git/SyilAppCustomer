@@ -93,7 +93,7 @@ const Feedback = () => {
         // Reset form fields
         setSubject('');
         setMessage('');
-        setRating('');
+        setRating('');    
       } else {
         console.log('else----ok');
         alert(result.message || 'Failed to submit feedback');

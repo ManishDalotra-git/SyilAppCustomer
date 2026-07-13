@@ -117,7 +117,6 @@ useFocusEffect(
 );
 
 
-
 // useEffect(() => { 
 //   const checkBellStatus = async () => {
 
@@ -125,13 +124,12 @@ useFocusEffect(
 //     const AppSupportTeamMember = await AsyncStorage.getItem('app_support_team_member');
 //     console.log('AppSupportTeamMember:', AppSupportTeamMember);
     
-
+ 
 //     if(AppSupportTeamMember === 'Yes'){
 //       setAppSupportTeamMember(true);
 //       console.log('AppSupportTeamMember---yes:', AppSupportTeamMember);
 //     }
 
-    
 
 //     if (!latestId) return;
 
@@ -186,7 +184,7 @@ useFocusEffect(
 
       <Text style={styles.welcome}>Customer Portal</Text>
 
-      <Pressable onPress={() => navigation.navigate('KnowledgeBase')} style={styles.card}>
+      {/* <Pressable onPress={() => navigation.navigate('KnowledgeBase')} style={styles.card}>
         <View style={styles.cardFlex} >
           <Image style={styles.cardImage} source={require('../../images/knowledge-base.png')} /> 
           <Image style={styles.arrow} source={require('../../images/arrow.png')} /> 
@@ -212,9 +210,61 @@ useFocusEffect(
             Submit a support ticket and get a fast response.
           </Text>
         </View>
-      </Pressable>
+      </Pressable> */}
+
+
+      <View style={styles.fourCardsRow}>
+        <Pressable onPress={() => navigation.navigate('KnowledgeBase')} style={styles.fourCardsRowCard}>
+          <View style={styles.fourCardsRowFlex} >
+            <Image style={styles.fourCardsRowImage} source={require('../../images/kb_icon_x4.png')} /> 
+          </View>
+
+          <View style={styles.fourCardsRowContent}>
+            <Text style={styles.fourCardsRowTitle}>Knowledge Base</Text>
+          </View>
+        </Pressable>
+
+        <Pressable onPress={() => navigation.navigate('Ticket')} style={styles.fourCardsRowCard}>
+          <View style={styles.fourCardsRowFlex} >
+            <Image style={styles.fourCardsRowImage} source={require('../../images/create_ticket_x4.png')} /> 
+          </View>
+
+          <View style={styles.fourCardsRowContent}>
+            <Text style={styles.fourCardsRowTitle}>Create Ticket</Text>
+          </View>
+        </Pressable>
+
+        <Pressable onPress={() => navigation.navigate('ViewTicket')} style={styles.fourCardsRowCard}>
+          <View style={styles.fourCardsRowFlex} >
+            <Image style={styles.fourCardsRowImage} source={require('../../images/view_ticket_x4.png')} /> 
+          </View>
+
+          <View style={styles.fourCardsRowContent}>
+            <Text style={styles.fourCardsRowTitle}>View Ticket</Text>
+          </View>
+        </Pressable>
+
+        <Pressable onPress={()  => navigation.navigate('Chatscreen')} style={styles.fourCardsRowCard}>
+          <View style={styles.fourCardsRowFlex} >
+            <Image style={styles.fourCardsRowImage} source={require('../../images/Chat_ai_x4.png')} /> 
+          </View>
+
+          <View style={styles.fourCardsRowContent}>
+            <Text style={styles.fourCardsRowTitle}>Chat With Alex</Text>
+          </View>
+        </Pressable>
+      </View>
+
+      <View style={styles.bottomButton}>
+        <Pressable onPress={() => navigation.navigate('CustomerNewsListing')} style={styles.bottomButtonCard}>
+          <View style={styles.bottomButtonCardFlex} >
+            <Text style={styles.bottomButtonCardTitle}>Customer News</Text>
+          </View>
+        </Pressable>
+      </View>
 
       </ScrollView>
+
 
       <Footer appSupportTeamMember={appSupportTeamMember} currentRoute={currentRoute} />
 
@@ -330,5 +380,54 @@ badgeText: {
   fontSize: 8,
   fontWeight: '700',
 },
+
+
+fourCardsRow: {
+    display: 'flex',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+
+  fourCardsRowCard: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 25,
+    flexBasis: '47%',
+    maxWidth: '47%',
+    width: '47%',
+    marginBottom: 20,
+  },
+
+  fourCardsRowFlex: {
+    alignItems: 'center',
+  },
+
+  fourCardsRowImage: {
+    width: 50,
+    height: 50,
+  },
+
+  fourCardsRowTitle: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+
+
+  bottomButton:{
+    backgroundColor:'#FFEA00',
+    borderRadius:100,
+    padding:15,
+    alignItems:'center',
+  },
+  bottomButtonCardTitle:{
+    fontSize: 20,
+    fontWeight: '500',
+    Color:'#000',
+  },
 
 })

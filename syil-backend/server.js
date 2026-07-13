@@ -394,10 +394,10 @@ app.post('/create-ticket', async (req, res) => {
       files,
     } = ticketData;
 
-    // 🟡 safety
+    // safety
     const categoryArray = Array.isArray(categories) ? categories : [];
 
-    // ✅ HubSpot FORM FIELDS (value kabhi undefined nahi)
+    
     const fields = [
       { objectTypeId: '0-1', name: 'email', value: email || '' },
 
@@ -445,7 +445,7 @@ app.post('/create-ticket', async (req, res) => {
 
           fields.push({
             objectTypeId: '0-5',
-            name: 'hs_file_upload', // HubSpot form file field name
+            name: 'hs_file_upload', 
             value: fileIds.join(';'),
           });
         }
@@ -1483,7 +1483,7 @@ app.post('/get-owner-id', async (req, res) => {
     console.log('Matched owner:', matchedOwner || 'NOT FOUND');
 
     if (!matchedOwner) {
-      return res.status(200).json({ ownerId: null }); // ❌ 404 ki jagah 200 return karo
+      return res.status(200).json({ ownerId: null }); 
     }
 
     return res.status(200).json({ ownerId: matchedOwner.userId, OwnerUserID: matchedOwner.id });

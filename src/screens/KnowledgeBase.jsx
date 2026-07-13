@@ -242,7 +242,8 @@ useEffect(() => {
                   source={require('../../images/profile_icon.png')}
                   style={styles.profileImage}
                 /> */}
-                
+                  
+
                 <View style={styles.initialsAvatar}>
                   <Text style={styles.initialsText}>
                     {getInitials(firstName, lastName)}

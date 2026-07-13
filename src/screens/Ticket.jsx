@@ -358,7 +358,7 @@ const formatCategoryLabel = (key) => {
       
       <View style={styles.containerStyle}>
       <Text style={styles.label}>Your Email <Text style={styles.errorColor}>*</Text></Text>
-      <Text>Enter the email of the partner contact person creating the ticket</Text>
+      {/* <Text>Enter the email of the partner contact person creating the ticket</Text> */}
       <TextInput
         style={[
           styles.inputEmail,
@@ -436,13 +436,13 @@ const formatCategoryLabel = (key) => {
         onChangeText={setSerialNo}
       />
 
-      <Text style={styles.label}>Sales Order Number</Text>
+      {/* <Text style={styles.label}>Sales Order Number</Text>
       <TextInput
         style={styles.input}
         value={salesOrder}
-        onChangeText={setSalesOrder}
-        
-      />
+        onChangeText={setSalesOrder}  
+      /> */}
+
       <Text style={styles.label}>Category</Text>
 
       {Object.keys(categories).map(key => (

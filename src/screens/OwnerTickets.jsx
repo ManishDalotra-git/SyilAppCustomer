@@ -319,8 +319,8 @@ console.log('Final senderActorId:', senderActorId);
                     <View style={styles.initialsAvatar}>
                         <Text style={styles.initialsText}>
                         {getInitials(firstName, lastName)}
-                        </Text>
-                    </View>
+                    </Text>
+                  </View>
                 </Pressable>
     
                 <Image
@@ -427,7 +427,6 @@ const styles = StyleSheet.create({
   initialsAvatar:{width:30,height:30,backgroundColor:'#000',borderRadius:100,justifyContent:'center',alignItems:'center',},
   initialsText:{fontSize:14,fontWeight:500,color:'#FFEA00'},
   profileImage:{width:30,height:30,},
-
 
 
     ticketContainer: {

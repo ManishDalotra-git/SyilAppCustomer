@@ -31,11 +31,12 @@ const handleSubmit = async () => {
   setLoading(true);
 
   // https://syilapp-w8ye.onrender.com/check_login_detail
-  // http://192.168.0.91:3000/
+  // http://192.168.0.58:3000/
 
+  //https://syilappcustomer.onrender.com
   try {
       const response = await fetch(
-        'https://syilappcustomer.onrender.com/check_login_detail',
+        'http://192.168.0.58:3000/check_login_detail',
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -117,7 +118,7 @@ const handleSubmit = async () => {
       <KeyboardAvoidingView
                 style={{ flex: 1 }}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // adjust if you have headers
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} 
               >
       <ScrollView contentContainerStyle={styles.container}
         // keyboardShouldPersistTaps="handled"

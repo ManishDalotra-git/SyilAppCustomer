@@ -435,10 +435,10 @@ console.log('Selected files before upload:', selectedFiles);
             <TouchableOpacity
               style={styles.ReplyStyle}
               onPress={() => {
-  setSelectedFiles([]);
-  setMessageText('');
-  setReplyModalVisible(true);
-}}
+                setSelectedFiles([]);
+                setMessageText('');
+                setReplyModalVisible(true);
+              }}
             >
               <Text style={{ color: '#fff', textAlign: 'center', fontWeight: '500', fontSize: 16 }}>
                 Reply to Customer
