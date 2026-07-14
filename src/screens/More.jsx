@@ -91,7 +91,7 @@ const More = ({ navigation }) => {
                     source={require('../../images/right_arrow.png')}
                     style={styles.rightarrowIcon}
                     /> */}
-    
+
                     {/* <Image
                         source={require('../../images/profile_icon.png')}
                         style={styles.profileImage}

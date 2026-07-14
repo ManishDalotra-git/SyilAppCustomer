@@ -177,7 +177,7 @@ const AskAlex = () => {
     setTypingMessageId(botId);
 
     try {
-      const response = await fetch('https://syilapp-w8ye.onrender.com/ask-alex', {
+      const response = await fetch('https://syilappcustomer.onrender.com/ask-alex', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: userText }),
