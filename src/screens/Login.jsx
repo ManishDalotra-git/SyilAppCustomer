@@ -37,7 +37,7 @@ const handleSubmit = async () => {
   //https://syilappcustomer.onrender.com
   try {
       const response = await fetch(
-        'https://syilapp-w8ye.onrender.com/check_login_detail',
+        'https://syilappcustomer.onrender.com/check_login_detail',
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

@@ -67,7 +67,7 @@ export const saveFCMToken = async (email) => {
 
     // Send token to backend
     const response = await fetch(
-      'https://syilapp-w8ye.onrender.com/save-fcm-token',
+      'https://syilappcustomer.onrender.com/save-fcm-token',
       {
         method:'POST',
         headers:{
@@ -84,7 +84,7 @@ export const saveFCMToken = async (email) => {
     
     const text = await response.text();
 
-    console.log("Response:", text);
+  console.log("Response:", text);
 
 
   } catch(error){
