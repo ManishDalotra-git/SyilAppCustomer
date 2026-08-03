@@ -16,5 +16,3 @@ node_modules/
 *.log
 
 .env
-
-firebase-adminsdk.json
