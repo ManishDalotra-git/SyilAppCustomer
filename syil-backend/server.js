@@ -474,13 +474,25 @@ app.post('/save-fcm-token', async (req, res) => {
 
 const { getMessaging } = require("firebase-admin/messaging");
 
-app.post('/hubspot-webhook', async (req, res) => {
-  console.log("========== WEBHOOK RECEIVED ==========");
-  console.log(JSON.stringify(req.body, null, 2));
+app.post("/hubspot-webhook", async (req, res) => {
+  try {
+    console.log("========== WEBHOOK RECEIVED ==========");
+    console.log(JSON.stringify(req.body, null, 2));
 
-  res.sendStatus(200);
+    res.sendStatus(200);
+
+    const event = req.body[0];
+
+    const threadId = event.objectId;
+    const messageId = event.messageId;
+
+    console.log("Thread ID:", threadId);
+    console.log("Message ID:", messageId);
+
+  } catch (err) {
+    console.log(err);
+  }
 });
-  
 
 
 
