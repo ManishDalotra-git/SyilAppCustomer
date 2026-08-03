@@ -475,26 +475,42 @@ app.post('/save-fcm-token', async (req, res) => {
 const { getMessaging } = require("firebase-admin/messaging");
 
 app.post("/hubspot-webhook", async (req, res) => {
+
+  console.log("========== WEBHOOK RECEIVED ==========");
+  console.log(JSON.stringify(req.body, null, 2));
+
+  res.sendStatus(200);
+
   try {
-    console.log("========== WEBHOOK RECEIVED ==========");
-    console.log(JSON.stringify(req.body, null, 2));
 
-    res.sendStatus(200);
-
-    const event = req.body[0];
-
-    const threadId = event.objectId;
-    const messageId = event.messageId;
+    const threadId = req.body[0].objectId;
 
     console.log("Thread ID:", threadId);
-    console.log("Message ID:", messageId);
+
+    const fetch = (...args) =>
+      import("node-fetch").then(({ default: fetch }) => fetch(...args));
+
+    const response = await fetch(
+      `https://api.hubapi.com/conversations/v3/conversations/threads/${threadId}/messages`,
+      {
+        headers: {
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    console.log("========== THREAD DATA ==========");
+    console.log(JSON.stringify(data, null, 2));
 
   } catch (err) {
+
     console.log(err);
+
   }
+
 });
-
-
 
 // Step 2: Create ticket and associate with contact
 const uploadedFiles = [];
