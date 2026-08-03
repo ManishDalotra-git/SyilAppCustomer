@@ -55,7 +55,7 @@ const CustomerNewsDetail = ({ route, navigation }) => {
 
           const AppSupportTeamMember = await AsyncStorage.getItem('app_support_team_member');
     console.log('AppSupportTeamMember:', AppSupportTeamMember);
-    
+
 
     if(AppSupportTeamMember === 'Yes'){
       setAppSupportTeamMember(true);

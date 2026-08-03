@@ -96,13 +96,13 @@ useFocusEffect(
 
         await AsyncStorage.setItem('app_support_team_member', supportValue);
 
-        // 2️⃣ BELL STATUS CHECK (API ke baad)
+
         const storedId = await AsyncStorage.getItem('lastSeenArticleId');
 
         if (!latestId) return;
 
         if (storedId !== latestId) {
-          setShowBell(true);
+          setShowBell(true);0
         } else {
           setShowBell(false);
         }

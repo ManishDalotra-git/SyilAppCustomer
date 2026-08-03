@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "758074279182",
+    "project_id": "syil-app",
+    "storage_bucket": "syil-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:758074279182:android:5ca11c53226e705f2a835f",
+        "android_client_info": {
+          "package_name": "com.syilreact.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhHxJI_ekcJPohNJFfmuFLFboi25-aKWI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

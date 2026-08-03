@@ -70,7 +70,7 @@ const CustomerNewsListing = ({ navigation }) => {
     const data = await response.json();
 
     const sortedData = (data.results || []).sort(
-      (a, b) => new Date(b.publishDate) - new Date(a.publishDate)
+      (a, b) => new Date(b.publisshDate) - new Date(a.publishDate)
     );
 
     setNews(sortedData);

@@ -78,7 +78,7 @@ const OwnerTickets = ({ navigation }) => {
 
       const fetchTickets = async () => {
         try {
-          
+
           setLoading(true);
 
 console.log('email-----email---- ' , email);
@@ -87,7 +87,7 @@ console.log('email-----email---- ' , email);
       'https://syilappcustomer.onrender.com/get-owner-id',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Cont                    ent-Type': 'application/json' },
         body: JSON.stringify({ email: email }),
       }
 );
@@ -144,7 +144,7 @@ console.log('Final senderActorId:', senderActorId);
   );
 
   const formatDate = (dateString) => {
-    if (!dateString) return '';
+  if (!dateString) return '';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-GB', {
       day: '2-digit',

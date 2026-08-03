@@ -149,13 +149,6 @@ const formatCategoryLabel = (key) => {
     return Object.keys(categories).filter(key => categories[key]);
   };
 
-
-
-
-
-
-
-
   const uploadToServer = async (files) => {
     if (!files || files.length === 0) return [];
 
@@ -648,7 +641,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 15,
     marginTop: 6,
-    backgroundColor:'#F5F5F7',
+    backgroundColor:'#F  5F5F7',
     textTransform:'lowercase',
   },
   textArea: {

@@ -1,3 +1,13 @@
+const { initializeApp, cert } = require("firebase-admin/app");
+
+const serviceAccount = require("./firebase-adminsdk.json");
+
+initializeApp({
+  credential: cert(serviceAccount),
+});
+
+require("dotenv").config();
+
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -321,6 +331,154 @@ app.post('/get-contact-id', async (req, res) => {
     console.error('Contact Error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+
+app.post('/save-fcm-token', async (req, res) => {
+
+  const { email, fcmToken } = req.body;
+
+  console.log("Email:", email);
+  console.log("FCM Token:", fcmToken);
+
+
+  if (!email || !fcmToken) {
+    return res.status(400).json({
+      message:"Email and FCM token required"
+    });
+  }
+
+
+  try {
+
+    const fetch = (...args) =>
+      import('node-fetch').then(({default: fetch}) => fetch(...args));
+
+
+    // 1. Search contact by email
+
+    const searchResponse = await fetch(
+      'https://api.hubapi.com/crm/v3/objects/contacts/search',
+      {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          Authorization:`Bearer ${HUBSPOT_API_KEY}`
+        },
+
+        body:JSON.stringify({
+
+          filterGroups:[
+            {
+              filters:[
+                {
+                  propertyName:'email',
+                  operator:'EQ',
+                  value:email
+                }
+              ]
+            }
+          ],
+
+          properties:[
+            'email'
+          ]
+
+        })
+
+      }
+    );
+
+
+    const searchData = await searchResponse.json();
+
+
+    if(!searchData.results.length){
+
+      return res.status(404).json({
+        message:"Contact not found"
+      });
+
+    }
+
+
+    const contactId = searchData.results[0].id;
+
+
+
+    // 2. Update FCM Token in HubSpot
+
+    const updateResponse = await fetch(
+
+      `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`,
+
+      {
+
+        method:'PATCH',
+
+        headers:{
+          'Content-Type':'application/json',
+          Authorization:`Bearer ${HUBSPOT_API_KEY}`
+        },
+
+
+        body:JSON.stringify({
+
+          properties:{
+            fcm_token:fcmToken
+          }
+
+        })
+
+      }
+
+    );
+
+
+
+    if(!updateResponse.ok){
+
+      const error = await updateResponse.text();
+
+      return res.status(400).json({
+        error
+      });
+
+    }
+
+
+
+    return res.json({
+
+      success:true,
+      message:"FCM Token saved"
+
+    });
+
+
+  }
+  catch(error){
+
+    console.log(error);
+
+    res.status(500).json({
+      message:"Server error"
+    });
+
+  }
+
+
+});
+
+
+
+const { getMessaging } = require("firebase-admin/messaging");
+
+app.post('/hubspot-webhook', async (req, res) => {
+  console.log("========== WEBHOOK RECEIVED ==========");
+  console.log(JSON.stringify(req.body, null, 2));
+
+  res.sendStatus(200);
 });
 
 

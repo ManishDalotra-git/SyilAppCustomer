@@ -181,7 +181,7 @@ useEffect(() => {
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.articleCard}
-      onPress={() =>
+      onPress={() =>       
         navigation.navigate('KnowledgeDetail', { article: item })
       }
     >
@@ -234,7 +234,8 @@ useEffect(() => {
           <View style={styles.flexClass}>
             <Pressable onPress={() => navigation.navigate('Profile')}>
               {/* <Image
-                source={require('../../images/right_arrow.png')}
+                source={require('../../imag
+                es/right_arrow.png')}
                 style={styles.rightarrowIcon}
               /> */}
 

@@ -82,10 +82,6 @@ const checkLoginStatus = async () => {
   }, 4000);
 };
 
-
-
-
-
   return (
     <ImageBackground style={styles.container}>
     <Animated.View

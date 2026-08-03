@@ -10,7 +10,7 @@ const WebViewScreen = ({ route }) => {
 
   return (
 
-    
+
 
     <SafeAreaView style={styles.container}>
       

@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import { setContactId } from '../utils/hiddenFields';
+import { saveFCMToken } from '../utils/fcm';
 
 const Login = () => {
 
@@ -36,7 +37,7 @@ const handleSubmit = async () => {
   //https://syilappcustomer.onrender.com
   try {
       const response = await fetch(
-        'https://syilappcustomer.onrender.com/check_login_detail',
+        'https://syilapp-w8ye.onrender.com/check_login_detail',
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -71,6 +72,8 @@ const handleSubmit = async () => {
         contactId: result.contactId,
       })
     );
+
+    await saveFCMToken(result.user.email);
 
 
     await AsyncStorage.setItem('userID', String(result.contactId ?? ''));
@@ -123,7 +126,7 @@ const handleSubmit = async () => {
       <ScrollView contentContainerStyle={styles.container}
         // keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        
+
         {/* Logo */}
         <View style={styles.logoAlign} >
         <Image

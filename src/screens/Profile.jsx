@@ -48,7 +48,7 @@ const Profile = ({ navigation }) => {
       if (data) {
         const parsed = JSON.parse(data);
         setUser(parsed);
-        setContactId(parsed.contactId); // 🔒 hidden
+        setContactId(parsed.contactId); //
       }
     };
     getUser();

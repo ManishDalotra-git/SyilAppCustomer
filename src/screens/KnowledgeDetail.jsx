@@ -234,7 +234,7 @@ const KnowledgeDetail = ({ route, navigation }) => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        
+
 
          {/* META */}
         <View style={styles.metaContainer}>

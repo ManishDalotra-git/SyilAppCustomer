@@ -102,7 +102,7 @@ const More = ({ navigation }) => {
                         </Text>
                     </View>
                 </Pressable>
-    
+
                 <Image
                     source={require('../../images/syil_logo_black.png')}
                     style={styles.logoSyil}
@@ -116,8 +116,6 @@ const More = ({ navigation }) => {
                 </Pressable>
             </View>
 
-            
-            
             {/* Ask Alex */}
             {email === 'manish.dalotra@techstriker.com' && (
             <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('UploadArticles')} >
