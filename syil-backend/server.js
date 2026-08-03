@@ -504,6 +504,56 @@ app.post("/hubspot-webhook", async (req, res) => {
     console.log("========== THREAD DATA ==========");
     console.log(JSON.stringify(data, null, 2));
 
+    // Get latest outgoing message
+const latestMessage = data.results.find(
+  (m) => m.type === "MESSAGE" && m.direction === "OUTGOING"
+);
+
+if (!latestMessage) {
+  console.log("No outgoing message found");
+  return;
+}
+
+// Customer Email
+const recipientEmail =
+  latestMessage.recipients?.[0]?.deliveryIdentifier?.value;
+
+console.log("Recipient Email:", recipientEmail);
+
+
+const contactSearch = await fetch(
+  "https://api.hubapi.com/crm/v3/objects/contacts/search",
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      filterGroups: [
+        {
+          filters: [
+            {
+              propertyName: "email",
+              operator: "EQ",
+              value: recipientEmail,
+            },
+          ],
+        },
+      ],
+      properties: [
+        "firstname",
+        "fcm_token",
+      ],
+    }),
+  }
+);
+
+const contactData = await contactSearch.json();
+
+console.log("========== CONTACT DATA ==========");
+console.log(JSON.stringify(contactData, null, 2));
+
   } catch (err) {
 
     console.log(err);
