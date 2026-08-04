@@ -1,12 +1,33 @@
+// const { initializeApp, cert } = require("firebase-admin/app");
+
+// const serviceAccount = require("./firebase-adminsdk.json");
+
+// initializeApp({
+//   credential: cert(serviceAccount),
+// });
+
+
 const { initializeApp, cert } = require("firebase-admin/app");
 
-const serviceAccount = require("./firebase-adminsdk.json");
+const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SDK);
 
 initializeApp({
   credential: cert(serviceAccount),
 });
 
-require("dotenv").config();
+const { getMessaging } = require("firebase-admin/messaging");
+
+
+// const { initializeApp, cert } = require("firebase-admin/app");
+
+// const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+
+// initializeApp({
+//   credential: cert(serviceAccount),
+// });
+
+console.log("Firebase Initialized Successfully");
+
 
 require('dotenv').config();
 const express = require('express');
