@@ -479,7 +479,7 @@ app.post("/hubspot-webhook", async (req, res) => {
   console.log("========== WEBHOOK RECEIVED ==========");
   console.log(JSON.stringify(req.body, null, 2));
 
-  res.sendStatus(200);
+ 
 
   try {
 
@@ -513,6 +513,7 @@ if (!latestMessage) {
   console.log("No outgoing message found");
   return;
 }
+
 
 // Customer Email
 const recipientEmail =
@@ -554,11 +555,50 @@ const contactData = await contactSearch.json();
 console.log("========== CONTACT DATA ==========");
 console.log(JSON.stringify(contactData, null, 2));
 
+if (!contactData.results.length) {
+  console.log("Contact not found");
+  return;
+}
+
+const contact = contactData.results[0];
+
+const fcmToken = contact.properties.fcm_token;
+
+console.log("FCM Token:", fcmToken);
+
+if (!fcmToken) {
+  console.log("FCM Token not found");
+  return;
+}
+
+
+try {
+  const response = await getMessaging().send({
+    token: fcmToken,
+    notification: {
+      title: "SYIL Support",
+      body: latestMessage.text,
+    },
+    data: {
+      threadId: threadId.toString(),
+      messageId: latestMessage.id,
+    },
+  });
+
+  console.log("Push Success:", response);
+} catch (error) {
+  console.error("Firebase Error:", error);
+}
+console.log("========== PUSH SENT ==========");
+
   } catch (err) {
+
 
     console.log(err);
 
   }
+
+   res.sendStatus(200);
 
 });
 

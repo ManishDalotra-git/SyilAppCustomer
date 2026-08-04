@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   searchIcon: {
     width: 18,
     height: 18,
-    marginHorizontal: 16,
+    marginHorizontal: 16, 
     tintColor: '#777',
   },
   searchInput: { flex: 1, fontSize: 14, color: '#000' },
