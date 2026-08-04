@@ -493,7 +493,7 @@ app.post('/save-fcm-token', async (req, res) => {
 
 
 
-const { getMessaging } = require("firebase-admin/messaging");
+// const { getMessaging } = require("firebase-admin/messaging");
 
 app.post("/hubspot-webhook", async (req, res) => {
 
