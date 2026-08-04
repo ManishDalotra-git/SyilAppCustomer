@@ -17,4 +17,5 @@ node_modules/
 
 .env
 
-firebase-adminsdk.json
+syil-backend/firebase-adminsdk.json
+
