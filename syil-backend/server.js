@@ -3,43 +3,12 @@ const { initializeApp, cert } = require("firebase-admin/app");
 const { getMessaging } = require("firebase-admin/messaging");
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SDK);
-// const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SDK);
-
-console.log("Project:", serviceAccount.project_id);
-console.log("Client:", serviceAccount.client_email);
-console.log("Private Key ID:", serviceAccount.private_key_id);
-console.log(
-  "Private Key First 30:",
-  serviceAccount.private_key.substring(0, 30)
-);
 
 initializeApp({
   credential: cert(serviceAccount),
 });
 
 console.log("Firebase Initialized Successfully");
-
-const { getAuth } = require("firebase-admin/auth");
-
-getAuth()
-  .listUsers(1)
-  .then((result) => {
-    console.log("Firebase Auth Working");
-    console.log(result.users.length);
-  })
-  .catch((err) => {
-    console.error("Firebase Auth Error:");
-    console.error(err);
-  });
-
-
-
-  console.log("Type:", serviceAccount.type);
-console.log("Token URI:", serviceAccount.token_uri);
-console.log("Private Key End:");
-console.log(serviceAccount.private_key.slice(-30));
-
-
 
 require('dotenv').config();
 const express = require('express');
