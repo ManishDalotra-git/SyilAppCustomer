@@ -32,6 +32,15 @@ getAuth()
     console.error(err);
   });
 
+
+
+  console.log("Type:", serviceAccount.type);
+console.log("Token URI:", serviceAccount.token_uri);
+console.log("Private Key End:");
+console.log(serviceAccount.private_key.slice(-30));
+
+
+
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
