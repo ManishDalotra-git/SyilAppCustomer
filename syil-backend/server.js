@@ -19,6 +19,18 @@ initializeApp({
 
 console.log("Firebase Initialized Successfully");
 
+const admin = require("firebase-admin");
+
+admin
+  .auth()
+  .listUsers(1)
+  .then((users) => {
+    console.log("Firebase Auth Working");
+  })
+  .catch((err) => {
+    console.error("Firebase Auth Error:", err);
+  });
+
 
 require('dotenv').config();
 const express = require('express');
