@@ -1,10 +1,15 @@
-// const { initializeApp, cert } = require("firebase-admin/app");
+const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SDK);
 
-// const serviceAccount = require("./firebase-adminsdk.json");
-
-// initializeApp({
-//   credential: cert(serviceAccount),
-// });
+console.log("Project:", serviceAccount.project_id);
+console.log("Client:", serviceAccount.client_email);
+console.log(
+  "Private Key Starts:",
+  serviceAccount.private_key.startsWith("-----BEGIN PRIVATE KEY-----")
+);
+console.log(
+  "Private Key Ends:",
+  serviceAccount.private_key.includes("-----END PRIVATE KEY-----")
+);
 
 
 const { initializeApp, cert } = require("firebase-admin/app");
@@ -16,15 +21,6 @@ initializeApp({
 });
 
 const { getMessaging } = require("firebase-admin/messaging");
-
-
-// const { initializeApp, cert } = require("firebase-admin/app");
-
-// const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-
-// initializeApp({
-//   credential: cert(serviceAccount),
-// });
 
 console.log("Firebase Initialized Successfully");
 
