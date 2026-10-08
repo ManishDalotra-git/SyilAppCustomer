@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getContactId, setContactId } from '../utils/hiddenFields';
 import { Picker } from '@react-native-picker/picker';
 import { Alert } from 'react-native';
+import { logoutFCM } from '../utils/fcm';
 
 const Profile = ({ navigation }) => {
 
@@ -154,32 +155,85 @@ const Profile = ({ navigation }) => {
     }
   };
 
-  const handleLogout = () => {
+const handleLogout = () => {
   Alert.alert(
     'Logout',
     'Are you sure you want to logout?',
     [
-      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
       {
         text: 'Logout',
+
         onPress: async () => {
-          await AsyncStorage.multiRemove([
-            'isLoggedIn',
-            'lastLoginTime',
-            'userEmail',
-            'userData',
-            'userID',
-            'userFirstName',
-            'userLastName',
-            'userBio',
-            'userPhone',
-            'userGender',
-          ]);
-          setContactId(null);
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Login' }],
-          });
+          try {
+            // ==========================================
+            // REMOVE CUSTOMER FCM TOKEN
+            // ==========================================
+            const savedEmail =
+              await AsyncStorage.getItem('userEmail');
+            if (savedEmail) {
+              try {
+                await logoutFCM(savedEmail);
+                console.log(
+                  'Customer FCM logout completed'
+                );
+              } catch (fcmError) {
+                console.log(
+                  'Customer FCM logout error:',
+                  fcmError
+                );
+              }
+            }
+
+            // ==========================================
+            // CLEAR CUSTOMER LOCAL DATA
+            // ==========================================
+
+            await AsyncStorage.multiRemove([
+              'isLoggedIn',
+              'lastLoginTime',
+              'userEmail',
+              'userData',
+              'userID',
+              'userFirstName',
+              'userLastName',
+              'userBio',
+              'userPhone',
+              'userGender',
+              'app_support_team_member',
+              'mobile_app_permission',
+              'customer_fcm_token',
+            ]);
+
+            // ==========================================
+            // CLEAR CONTACT ID
+            // ==========================================
+
+            setContactId(null);
+
+            // ==========================================
+            // GO TO LOGIN
+            // ==========================================
+
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Login' }],
+            });
+
+          } catch (error) {
+            console.log(
+              'Logout error:',
+              error
+            );
+
+            Alert.alert(
+              'Error',
+              'Unable to logout. Please try again.'
+            );
+          }
         },
       },
     ]

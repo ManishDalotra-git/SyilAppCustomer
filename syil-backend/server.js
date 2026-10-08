@@ -473,134 +473,806 @@ app.post('/save-fcm-token', async (req, res) => {
 });
 
 
+// ============================================================
+// REMOVE CUSTOMER FCM TOKEN
+// ============================================================
+
+app.post('/remove-fcm-token', async (req, res) => {
+
+  const {
+    email,
+  } = req.body;
+
+
+  if (!email) {
+
+    return res.status(400).json({
+      success: false,
+      message: 'Email is required',
+    });
+
+  }
+
+
+  try {
+
+    const fetch =
+      (...args) =>
+        import('node-fetch').then(
+          ({ default: fetch }) =>
+            fetch(...args)
+        );
+
+
+    const normalizedEmail =
+      String(email)
+        .trim()
+        .toLowerCase();
+
+
+    // =====================================================
+    // FIND HUBSPOT CONTACT
+    // =====================================================
+
+    const searchResponse =
+      await fetch(
+        'https://api.hubapi.com/crm/v3/objects/contacts/search',
+        {
+          method: 'POST',
+
+          headers: {
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+
+            'Content-Type':
+              'application/json',
+          },
+
+          body: JSON.stringify({
+
+            filterGroups: [
+              {
+                filters: [
+                  {
+                    propertyName:
+                      'email',
+
+                    operator:
+                      'EQ',
+
+                    value:
+                      normalizedEmail,
+                  },
+                ],
+              },
+            ],
+
+            properties: [
+              'email',
+              'fcm_token',
+            ],
+
+            limit: 1,
+
+          }),
+        }
+      );
+
+
+    const searchData =
+      await searchResponse.json();
+
+
+    // =====================================================
+    // HUBSPOT SEARCH ERROR
+    // =====================================================
+
+    if (!searchResponse.ok) {
+
+      console.error(
+        'Customer FCM contact search failed:',
+        searchData
+      );
+
+      return res
+        .status(searchResponse.status)
+        .json({
+          success: false,
+          message:
+            'Unable to find customer contact',
+        });
+
+    }
+
+
+    // =====================================================
+    // CONTACT NOT FOUND
+    // =====================================================
+
+    if (
+      !searchData.results ||
+      searchData.results.length === 0
+    ) {
+
+      return res.status(404).json({
+        success: false,
+        message:
+          'Customer contact not found',
+      });
+
+    }
+
+
+    const contactId =
+      String(
+        searchData.results[0].id
+      );
+
+
+    // =====================================================
+    // CLEAR FCM TOKEN
+    // =====================================================
+
+    const updateResponse =
+      await fetch(
+        `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`,
+        {
+          method: 'PATCH',
+
+          headers: {
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+
+            'Content-Type':
+              'application/json',
+          },
+
+          body: JSON.stringify({
+
+            properties: {
+              fcm_token: '',
+            },
+
+          }),
+        }
+      );
+
+
+    const updateText =
+      await updateResponse.text();
+
+
+    // =====================================================
+    // HUBSPOT UPDATE ERROR
+    // =====================================================
+
+    if (!updateResponse.ok) {
+
+      console.error(
+        'Customer FCM token remove failed:',
+        updateText
+      );
+
+      return res
+        .status(updateResponse.status)
+        .json({
+          success: false,
+          message:
+            'Unable to remove FCM token',
+        });
+
+    }
+
+
+    console.log(
+      `Customer FCM token removed for contact ${contactId}`
+    );
+
+
+    return res.status(200).json({
+
+      success: true,
+
+      message:
+        'Customer FCM token removed successfully',
+
+      contactId,
+
+    });
+
+
+  } catch (error) {
+
+    console.error(
+      'Remove customer FCM token error:',
+      error
+    );
+
+
+    return res.status(500).json({
+
+      success: false,
+
+      message:
+        'Internal server error',
+
+    });
+
+  }
+
+});
+
+
 
 // const { getMessaging } = require("firebase-admin/messaging");
 
 app.post("/hubspot-webhook", async (req, res) => {
 
-  console.log("========== WEBHOOK RECEIVED ==========");
-  console.log(JSON.stringify(req.body, null, 2));
+  console.log(
+    "========== CUSTOMER WEBHOOK RECEIVED =========="
+  );
 
- 
 
   try {
 
-    const threadId = req.body[0].objectId;
+    // =====================================================
+    // VALIDATE WEBHOOK BODY
+    // =====================================================
 
-    console.log("Thread ID:", threadId);
+    if (
+      !Array.isArray(req.body) ||
+      req.body.length === 0
+    ) {
 
-    const fetch = (...args) =>
-      import("node-fetch").then(({ default: fetch }) => fetch(...args));
+      console.log(
+        "Invalid webhook body"
+      );
 
-    const response = await fetch(
-      `https://api.hubapi.com/conversations/v3/conversations/threads/${threadId}/messages`,
-      {
-        headers: {
-          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
-        },
-      }
+      return res.sendStatus(200);
+    }
+
+
+    // =====================================================
+    // GET THREAD ID
+    // =====================================================
+
+    const threadId =
+      req.body[0]?.objectId;
+
+
+    if (!threadId) {
+
+      console.log(
+        "Webhook threadId missing"
+      );
+
+      return res.sendStatus(200);
+    }
+
+
+    console.log(
+      "Customer webhook Thread ID:",
+      threadId
     );
 
-    const data = await response.json();
 
-    console.log("========== THREAD DATA ==========");
-    console.log(JSON.stringify(data, null, 2));
-
-    // Get latest outgoing message
-const latestMessage = data.results.find(
-  (m) => m.type === "MESSAGE" && m.direction === "OUTGOING"
-);
-
-if (!latestMessage) {
-  console.log("No outgoing message found");
-  return;
-}
+    const fetch =
+      (...args) =>
+        import("node-fetch").then(
+          ({ default: fetch }) =>
+            fetch(...args)
+        );
 
 
-// Customer Email
-const recipientEmail =
-  latestMessage.recipients?.[0]?.deliveryIdentifier?.value;
+    // =====================================================
+    // STEP 1
+    // GET CONVERSATION MESSAGES
+    // =====================================================
 
-console.log("Recipient Email:", recipientEmail);
-
-
-const contactSearch = await fetch(
-  "https://api.hubapi.com/crm/v3/objects/contacts/search",
-  {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${HUBSPOT_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      filterGroups: [
+    const messageResponse =
+      await fetch(
+        `https://api.hubapi.com/conversations/v3/conversations/threads/${threadId}/messages`,
         {
-          filters: [
-            {
-              propertyName: "email",
-              operator: "EQ",
-              value: recipientEmail,
-            },
-          ],
-        },
-      ],
-      properties: [
-        "firstname",
-        "fcm_token",
-      ],
-    }),
+          method: "GET",
+
+          headers: {
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+          },
+        }
+      );
+
+
+    const messageData =
+      await messageResponse.json();
+
+
+    if (!messageResponse.ok) {
+
+      console.error(
+        "Unable to fetch conversation messages:",
+        messageData
+      );
+
+      return res.sendStatus(200);
+    }
+
+
+    const messages =
+      Array.isArray(messageData.results)
+        ? messageData.results
+        : [];
+
+
+    // =====================================================
+    // STEP 2
+    // GET LATEST OUTGOING MESSAGE
+    // =====================================================
+
+    const outgoingMessages =
+      messages.filter(
+        message =>
+          message.type === "MESSAGE" &&
+          message.direction === "OUTGOING"
+      );
+
+
+    if (
+      outgoingMessages.length === 0
+    ) {
+
+      console.log(
+        "No outgoing message found"
+      );
+
+      return res.sendStatus(200);
+    }
+
+
+    /*
+     * Sort by createdAt so we actually get
+     * the newest outgoing message.
+     */
+
+    outgoingMessages.sort(
+      (a, b) =>
+        new Date(b.createdAt || 0).getTime() -
+        new Date(a.createdAt || 0).getTime()
+    );
+
+
+    const latestMessage =
+      outgoingMessages[0];
+
+
+    console.log(
+      "Latest outgoing message ID:",
+      latestMessage.id
+    );
+
+
+    // =====================================================
+    // STEP 3
+    // GET CUSTOMER EMAIL
+    // =====================================================
+
+    const recipientEmail =
+      latestMessage
+        ?.recipients?.[0]
+        ?.deliveryIdentifier
+        ?.value;
+
+
+    if (!recipientEmail) {
+
+      console.log(
+        "Recipient email not found"
+      );
+
+      return res.sendStatus(200);
+    }
+
+
+    const normalizedEmail =
+      String(recipientEmail)
+        .trim()
+        .toLowerCase();
+
+
+    console.log(
+      "Notification recipient:",
+      normalizedEmail
+    );
+
+
+    // =====================================================
+    // STEP 4
+    // FIND CUSTOMER CONTACT
+    // =====================================================
+
+    const contactSearchResponse =
+      await fetch(
+        "https://api.hubapi.com/crm/v3/objects/contacts/search",
+        {
+          method: "POST",
+
+          headers: {
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+
+            filterGroups: [
+              {
+                filters: [
+                  {
+                    propertyName:
+                      "email",
+
+                    operator:
+                      "EQ",
+
+                    value:
+                      normalizedEmail,
+                  },
+                ],
+              },
+            ],
+
+            properties: [
+              "firstname",
+              "fcm_token",
+            ],
+
+            limit: 1,
+
+          }),
+        }
+      );
+
+
+    const contactData =
+      await contactSearchResponse.json();
+
+
+    if (!contactSearchResponse.ok) {
+
+      console.error(
+        "Customer contact search failed:",
+        contactData
+      );
+
+      return res.sendStatus(200);
+    }
+
+
+    if (
+      !contactData.results ||
+      contactData.results.length === 0
+    ) {
+
+      console.log(
+        "Customer contact not found"
+      );
+
+      return res.sendStatus(200);
+    }
+
+
+    const contact =
+      contactData.results[0];
+
+
+    const fcmToken =
+      contact.properties?.fcm_token;
+
+
+    if (!fcmToken) {
+
+      console.log(
+        "Customer FCM token not found"
+      );
+
+      return res.sendStatus(200);
+    }
+
+
+    /*
+     * IMPORTANT:
+     * Complete FCM token log nahi karna.
+     */
+
+    console.log(
+      "Customer FCM token found"
+    );
+
+
+    // =====================================================
+    // STEP 5
+    // FIND TICKET USING CONVERSATION THREAD ID
+    // =====================================================
+    //
+    // Existing Customer server already uses:
+    //
+    // ticket.hs_conversations_originating_thread_id
+    //
+    // to get conversation thread from a ticket.
+    //
+    // Yahan same property ka reverse search kar rahe hain.
+    //
+    // =====================================================
+
+    const ticketSearchResponse =
+      await fetch(
+        "https://api.hubapi.com/crm/v3/objects/tickets/search",
+        {
+          method: "POST",
+
+          headers: {
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+
+            filterGroups: [
+              {
+                filters: [
+                  {
+                    propertyName:
+                      "hs_conversations_originating_thread_id",
+
+                    operator:
+                      "EQ",
+
+                    value:
+                      String(threadId),
+                  },
+                ],
+              },
+            ],
+
+            properties: [
+              "subject",
+              "customer_portal",
+              "hs_conversations_originating_thread_id",
+            ],
+
+            limit: 10,
+
+          }),
+        }
+      );
+
+
+    const ticketSearchData =
+      await ticketSearchResponse.json();
+
+
+    if (!ticketSearchResponse.ok) {
+
+      console.error(
+        "Ticket search by threadId failed:",
+        ticketSearchData
+      );
+
+      return res.sendStatus(200);
+    }
+
+
+    const matchingTickets =
+      Array.isArray(
+        ticketSearchData.results
+      )
+        ? ticketSearchData.results
+        : [];
+
+
+    if (
+      matchingTickets.length === 0
+    ) {
+
+      console.log(
+        `No ticket found for thread ${threadId}`
+      );
+
+      return res.sendStatus(200);
+    }
+
+
+    // =====================================================
+    // STEP 6
+    // CUSTOMER PORTAL TICKET ONLY
+    // =====================================================
+
+    const ticket =
+      matchingTickets.find(
+        item => {
+
+          const customerPortal =
+            String(
+              item.properties
+                ?.customer_portal || ""
+            )
+              .trim()
+              .toLowerCase();
+
+
+          return (
+            customerPortal === "true" ||
+            customerPortal === "yes" ||
+            customerPortal === "1"
+          );
+
+        }
+      );
+
+
+    if (!ticket) {
+
+      console.log(
+        `Thread ${threadId} is not associated with a Customer Portal ticket`
+      );
+
+      return res.sendStatus(200);
+    }
+
+
+    const ticketId =
+      String(ticket.id);
+
+
+    const ticketSubject =
+      String(
+        ticket.properties?.subject ||
+        "Ticket Details"
+      );
+
+
+    console.log(
+      "Customer Ticket ID:",
+      ticketId
+    );
+
+
+    console.log(
+      "Customer Ticket Subject:",
+      ticketSubject
+    );
+
+
+    // =====================================================
+    // STEP 7
+    // PREPARE NOTIFICATION BODY
+    // =====================================================
+
+    const notificationBody =
+      String(
+        latestMessage.text ||
+        "You have a new support message."
+      );
+
+
+    // =====================================================
+    // STEP 8
+    // SEND FIREBASE NOTIFICATION
+    // =====================================================
+
+    try {
+
+      const firebaseResponse =
+        await getMessaging().send({
+
+          token:
+            fcmToken,
+
+
+          // -------------------------------------------------
+          // Visible notification
+          // -------------------------------------------------
+
+          notification: {
+
+            title:
+              "SYIL Support",
+
+            body:
+              notificationBody,
+
+          },
+
+
+          // -------------------------------------------------
+          // Navigation data
+          //
+          // Firebase data values MUST be strings.
+          // -------------------------------------------------
+
+          data: {
+
+            notificationTitle:
+              "SYIL Support",
+
+            notificationBody:
+              notificationBody,
+
+            ticketId:
+              ticketId,
+
+            ticketSubject:
+              ticketSubject,
+
+            threadId:
+              String(threadId),
+
+            messageId:
+              String(
+                latestMessage.id || ""
+              ),
+
+          },
+
+
+          // -------------------------------------------------
+          // Android priority
+          // -------------------------------------------------
+
+          android: {
+
+            priority:
+              "high",
+
+          },
+
+        });
+
+
+      console.log(
+        "Customer push sent successfully:",
+        firebaseResponse
+      );
+
+
+    } catch (firebaseError) {
+
+      console.error(
+        "Customer Firebase push error:",
+        firebaseError
+      );
+
+    }
+
+
+    // =====================================================
+    // ALWAYS ACKNOWLEDGE HUBSPOT WEBHOOK
+    // =====================================================
+
+    return res.sendStatus(200);
+
+
+  } catch (error) {
+
+    console.error(
+      "Customer webhook error:",
+      error
+    );
+
+
+    /*
+     * Webhook ko 200 return kar rahe hain
+     * taaki HubSpot unnecessary retries na kare.
+     */
+
+    return res.sendStatus(200);
+
   }
-);
-
-const contactData = await contactSearch.json();
-
-console.log("========== CONTACT DATA ==========");
-console.log(JSON.stringify(contactData, null, 2));
-
-if (!contactData.results.length) {
-  console.log("Contact not found");
-  return;
-}
-
-const contact = contactData.results[0];
-
-const fcmToken = contact.properties.fcm_token;
-
-console.log("FCM Token:", fcmToken);
-
-if (!fcmToken) {
-  console.log("FCM Token not found");
-  return;
-}
-
-
-try {
-  const response = await getMessaging().send({
-    token: fcmToken,
-    notification: {
-      title: "SYIL Support",
-      body: latestMessage.text,
-    },
-    data: {
-      threadId: threadId.toString(),
-      messageId: latestMessage.id,
-    },
-  });
-
-  console.log("Push Success:", response);
-} catch (error) {
-  console.error("Firebase Error:", error);
-}
-console.log("========== PUSH SENT ==========");
-
-  } catch (err) {
-
-
-    console.log(err);
-
-  }
-
-   res.sendStatus(200);
 
 });
 
@@ -1040,97 +1712,371 @@ app.post('/get-user-data', async (req, res) => {
 
 
 
-// Step 3: check login details in hubspot
+// ============================================================
+// CHECK LOGIN DETAILS IN HUBSPOT - CUSTOMER APP
+// ============================================================
+
 app.post('/check_login_detail', async (req, res) => {
-  const { email, password } = req.body;
-  console.log('email---- ' , email);
-  console.log(HUBSPOT_API_KEY);
-  if (!email || !password) {
+
+  const {
+    email,
+    password,
+  } = req.body;
+
+  // =====================================================
+  // NORMALIZE EMAIL
+  // =====================================================
+
+  const normalizedEmail =
+    String(email || '')
+      .trim()
+      .toLowerCase();
+
+
+  console.log(
+    '========== CUSTOMER APP LOGIN =========='
+  );
+
+  console.log(
+    'Customer login email:',
+    normalizedEmail
+  );
+
+
+  // =====================================================
+  // VALIDATION
+  // =====================================================
+
+  if (
+    !normalizedEmail ||
+    !password
+  ) {
+
     return res.status(400).json({
-      message: 'Email and password are required',
+      success: false,
+      message:
+        'Email and password are required',
     });
+
   }
+
 
   try {
-    const fetch = (...args) =>
-      import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
-    // 1️⃣ SEARCH CONTACT BY EMAIL
-    const searchResponse = await fetch(
-      'https://api.hubapi.com/crm/v3/objects/contacts/search',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
-        },
-        body: JSON.stringify({
-          filterGroups: [
-            {
-              filters: [
+    const fetch =
+      (...args) =>
+        import('node-fetch').then(
+          ({ default: fetch }) =>
+            fetch(...args)
+        );
+
+
+    // =====================================================
+    // STEP 1
+    // SEARCH HUBSPOT CONTACT
+    // =====================================================
+
+    const searchResponse =
+      await fetch(
+        'https://api.hubapi.com/crm/v3/objects/contacts/search',
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json',
+
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+          },
+
+          body:
+            JSON.stringify({
+
+              filterGroups: [
                 {
-                  propertyName: 'email',
-                  operator: 'EQ',
-                  value: email,
+                  filters: [
+                    {
+                      propertyName:
+                        'email',
+
+                      operator:
+                        'EQ',
+
+                      value:
+                        normalizedEmail,
+                    },
+                  ],
                 },
               ],
-            },
-          ],
-          properties: ['email', 'mobile_password', 'firstname', 'lastname', 'profile_image', 'bio', 'phone', 'gender', 'app_support_team_member'],
-        }),
-      }
+
+              properties: [
+                'email',
+                'mobile_password',
+                'firstname',
+                'lastname',
+                'profile_image',
+                'bio',
+                'phone',
+                'gender',
+                'app_support_team_member',
+
+                // Customer/Dealer app permission
+                'mobile_app_permission',
+              ],
+
+              limit: 1,
+
+            }),
+        }
+      );
+
+
+    const searchData =
+      await searchResponse.json();
+
+
+    // =====================================================
+    // HUBSPOT ERROR
+    // =====================================================
+
+    if (!searchResponse.ok) {
+
+      console.error(
+        'Customer login HubSpot search failed:',
+        searchData
+      );
+
+      return res.status(500).json({
+        success: false,
+
+        message:
+          'Unable to verify your account. Please try again.',
+      });
+
+    }
+
+
+    // =====================================================
+    // CONTACT NOT FOUND
+    // =====================================================
+
+    if (
+      !searchData.results ||
+      searchData.results.length === 0
+    ) {
+
+      console.log(
+        'Customer login failed: contact not found'
+      );
+
+      return res.status(401).json({
+        success: false,
+
+        message:
+          'Invalid email or password.',
+      });
+
+    }
+
+
+    const contact =
+      searchData.results[0];
+
+    const contactId =
+      String(contact.id);
+
+    const properties =
+      contact.properties || {};
+
+    const hubspotPassword =
+      properties.mobile_password || '';
+
+
+    // =====================================================
+    // STEP 2
+    // PASSWORD CHECK
+    // =====================================================
+
+    if (!hubspotPassword) {
+
+      console.log(
+        'Customer login failed: password not configured'
+      );
+
+      return res.status(401).json({
+        success: false,
+
+        message:
+          'Password is not set for this account.',
+      });
+
+    }
+
+
+    if (
+      hubspotPassword !== password
+    ) {
+
+      console.log(
+        'Customer login failed: invalid password'
+      );
+
+      return res.status(401).json({
+        success: false,
+
+        message:
+          'Please enter a valid email and password.',
+      });
+
+    }
+
+
+    // =====================================================
+    // STEP 3
+    // MOBILE APP PERMISSION CHECK
+    // =====================================================
+
+    const rawMobileAppPermission =
+      properties.mobile_app_permission || '';
+
+    const mobileAppPermission =
+      String(
+        rawMobileAppPermission
+      )
+        .trim()
+        .toLowerCase();
+
+
+    console.log(
+      'Customer mobile_app_permission:',
+      rawMobileAppPermission || 'EMPTY'
     );
 
-    const searchData = await searchResponse.json();
 
-    // EMAIL NOT FOUND
-    if (!searchData.results || searchData.results.length === 0) {
-      return res.status(401).json({
-        message: 'Invalid email, please enter your valid email',
+    const hasCustomerAppPermission =
+      mobileAppPermission === 'customer app' ||
+      mobileAppPermission === 'customer_app';
+
+
+    // =====================================================
+    // EMPTY PERMISSION
+    // =====================================================
+
+    if (!mobileAppPermission) {
+
+      console.log(
+        `Customer login blocked: mobile_app_permission empty for contact ${contactId}`
+      );
+
+      return res.status(403).json({
+        success: false,
+
+        code:
+          'MOBILE_APP_PERMISSION_MISSING',
+
+        message:
+          'You do not have permission to access the Customer App. Please contact SYIL Support.',
       });
+
     }
 
-    // CONTACT FOUND
-    const contact = searchData.results[0];
-    const contactId = contact.id;
-    const hubspotPassword = contact.properties.mobile_password;
 
-    // PASSWORD NOT SET
-    if (!hubspotPassword) {
-      return res.status(401).json({
-        message: 'Password not set for this account',
+    // =====================================================
+    // WRONG APP PERMISSION
+    // =====================================================
+
+    if (!hasCustomerAppPermission) {
+
+      console.log(
+        `Customer login blocked: wrong app permission "${rawMobileAppPermission}" for contact ${contactId}`
+      );
+
+      return res.status(403).json({
+        success: false,
+
+        code:
+          'WRONG_MOBILE_APP',
+
+        message:
+          'These login details are not authorized for the Customer App. Please use the SYIL Dealer App or enter a valid Customer App account.',
       });
+
     }
 
-    // PASSWORD DOES NOT MATCH
-    if (hubspotPassword !== password) {
-      return res.status(401).json({
-        message: 'Please enter a valid password',
-      });
-    }
 
+    // =====================================================
+    // STEP 4
     // LOGIN SUCCESS
+    // =====================================================
+
+    console.log(
+      `Customer App login authorized for contact ${contactId}`
+    );
+
+
     return res.status(200).json({
-      message: 'Login successful',
-      contactId: contactId,
+
+      success: true,
+
+      message:
+        'Login successful',
+
+      contactId:
+        contactId,
+
       user: {
-        email: contact.properties.email,
-        firstName: contact.properties.firstname || '',
-        lastName: contact.properties.lastname || '',
-        profileImage: contact.properties.hs_avatar_url || '',
-        bio: contact.properties.bio || '',
-        phone: contact.properties.phone || '',
-        gender: contact.properties.gender || '',
-        app_support_team_member: contact.properties.app_support_team_member || '',
+
+        email:
+          properties.email || '',
+
+        firstName:
+          properties.firstname || '',
+
+        lastName:
+          properties.lastname || '',
+
+        profileImage:
+          properties.profile_image || '',
+
+        bio:
+          properties.bio || '',
+
+        phone:
+          properties.phone || '',
+
+        gender:
+          properties.gender || '',
+
+        app_support_team_member:
+          properties.app_support_team_member || '',
+
+        mobile_app_permission:
+          properties.mobile_app_permission || '',
+
       },
+
     });
+
 
   } catch (error) {
-    console.error('Login Error:', error);
+
+    console.error(
+      'Customer login error:',
+      error
+    );
+
     return res.status(500).json({
-      message: 'Internal server error',
+
+      success: false,
+
+      message:
+        'Internal server error',
+
     });
+
   }
+
 });
 
 
@@ -1820,7 +2766,6 @@ app.post('/get_ticket_conversation', async (req, res) => {
 
     console.log('msgData--- ', msgData.results);  
 
-    // 3️⃣ FORMAT MESSAGES
     const formattedMessages = msgData.results
       .filter(m => m.type === 'MESSAGE')
       .map(m => {
@@ -1830,7 +2775,7 @@ app.post('/get_ticket_conversation', async (req, res) => {
 
         return {
           id: m.id,
-          direction: m.direction, // INCOMING / OUTGOING
+          direction: m.direction,
           senderName: name,
           text: m.text || '',
           richText: m.richText || '',
@@ -2002,7 +2947,7 @@ app.post('/send-hubspot-message', async (req, res) => {
     return res.status(500).json({ error: 'Message send failed', detail: err.response?.data });
   }
 });
-   
+
 
 app.get('/customer-news', async (req, res) => {  
   try {

@@ -13,7 +13,10 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import { setContactId } from '../utils/hiddenFields';
-import { saveFCMToken } from '../utils/fcm';
+import {
+  saveFCMToken,
+  startFCMTokenRefreshListener,
+} from '../utils/fcm';
 
 const Login = () => {
 
@@ -29,84 +32,400 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
 const handleSubmit = async () => {
+
+  // =====================================================
+  // VALIDATION
+  // =====================================================
+
+  if (!username.trim() || !password) {
+    alert('Please enter email and password');
+    return;
+  }
+
+
   setLoading(true);
 
-  // https://syilapp-w8ye.onrender.com/check_login_detail
-  // http://192.168.0.58:3000/
 
-  //https://syilappcustomer.onrender.com
   try {
-      const response = await fetch(
-        'https://syilappcustomer.onrender.com/check_login_detail',
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                email: username,
-                password: password,
-                }),
-            }
+
+    // =====================================================
+    // NORMALIZE EMAIL
+    // =====================================================
+
+    const normalizedEmail =
+      username.trim().toLowerCase();
+
+
+    console.log(
+      '=========================================='
+    );
+
+    console.log(
+      'CUSTOMER LOGIN START'
+    );
+
+    console.log(
+      'Email:',
+      normalizedEmail
+    );
+
+    console.log(
+      '=========================================='
+    );
+
+
+    // =====================================================
+    // LOGIN API
+    // =====================================================
+
+    const response = await fetch(
+      'https://syilappcustomer.onrender.com/check_login_detail',
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type': 'application/json',
+        },
+
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password: password,
+        }),
+      }
+    );
+
+
+    // =====================================================
+    // READ SERVER RESPONSE
+    // =====================================================
+
+    const responseText =
+      await response.text();
+
+    let result = {};
+
+    try {
+
+      result =
+        responseText
+          ? JSON.parse(responseText)
+          : {};
+
+    } catch (parseError) {
+
+      console.log(
+        'Login JSON parse error:',
+        parseError
       );
 
-    const result = await response.json();
-    console.log('result------ ', result);
-    if (!response.ok) {
       setLoading(false);
-      alert(result.message || 'Login failed');
+
+      alert(
+        'Invalid server response'
+      );
+
       return;
     }
 
-    // ✅ LOGIN SUCCESS
-    await AsyncStorage.setItem('isLoggedIn', 'true');
+
+    // =====================================================
+    // SERVER LOGIN FAILED
+    // =====================================================
+
+    if (!response.ok) {
+
+      console.log(
+        'Customer login failed:',
+        result
+      );
+
+      setLoading(false);
+
+      alert(
+        result.message ||
+        'Login failed'
+      );
+
+      return;
+    }
+
+
+    // =====================================================
+    // GET MOBILE APP PERMISSION
+    // =====================================================
+
+    const mobileAppPermission =
+      String(
+        result.user?.mobile_app_permission ?? ''
+      )
+        .trim()
+        .toLowerCase();
+
+
+        console.log('LOGIN RESPONSE STATUS:', response.status);
+
+        console.log(
+          'LOGIN RESPONSE STRUCTURE:',
+          JSON.stringify({
+            success: result.success,
+            topLevelPermission: result.mobile_app_permission,
+            userPermission: result.user?.mobile_app_permission,
+            userPropertyKeys: Object.keys(result.user || {}),
+          })
+        );
+
+
+    console.log(
+      'Mobile App Permission:',
+      mobileAppPermission
+    );
+
+
+    // =====================================================
+    // CUSTOMER APP PERMISSION CHECK
+    // =====================================================
+
+    const hasCustomerAppPermission =
+      mobileAppPermission === 'customer app' ||
+      mobileAppPermission === 'customer_app';
+
+
+    if (!hasCustomerAppPermission) {
+
+      console.log(
+        'LOGIN BLOCKED: Customer App permission missing'
+      );
+
+      setLoading(false);
+
+      alert(
+        'You are not authorized to use the Customer App.'
+      );
+
+      return;
+    }
+
+
+    // =====================================================
+    // LOGIN SUCCESS
+    // =====================================================
+
+    console.log(
+      '=========================================='
+    );
+
+    console.log(
+      'CUSTOMER LOGIN SUCCESS'
+    );
+
+    console.log(
+      'Contact ID:',
+      result.contactId
+    );
+
+    console.log(
+      'Permission:',
+      result.user?.mobile_app_permission
+    );
+
+    console.log(
+      '=========================================='
+    );
+
+
+    // =====================================================
+    // SAVE LOGIN STATE
+    // =====================================================
+
+    await AsyncStorage.setItem(
+      'isLoggedIn',
+      'true'
+    );
+
     await AsyncStorage.setItem(
       'lastLoginTime',
       Date.now().toString()
     );
-    await AsyncStorage.setItem('userEmail', username);
-    //await AsyncStorage.setItem('userData', JSON.stringify(result.user));
-    setContactId(result.contactId);
+
+    await AsyncStorage.setItem(
+      'userEmail',
+      normalizedEmail
+    );
+
+
+    // =====================================================
+    // SAVE MOBILE APP PERMISSION
+    // =====================================================
+
+    await AsyncStorage.setItem(
+      'mobile_app_permission',
+      String(
+        result.user?.mobile_app_permission ?? ''
+      )
+    );
+
+
+    // =====================================================
+    // SAVE CONTACT ID
+    // =====================================================
+
+    setContactId(
+      result.contactId
+    );
+
+
+    // =====================================================
+    // SAVE COMPLETE USER DATA
+    // =====================================================
+
     await AsyncStorage.setItem(
       'userData',
       JSON.stringify({
         ...result.user,
-        contactId: result.contactId,
+        contactId:
+          result.contactId,
       })
     );
 
-    await saveFCMToken(result.user.email);
+
+    // =====================================================
+    // SAVE INDIVIDUAL USER DATA
+    // =====================================================
+
+    await AsyncStorage.setItem(
+      'userID',
+      String(
+        result.contactId ?? ''
+      )
+    );
+
+    await AsyncStorage.setItem(
+      'userFirstName',
+      String(
+        result.user?.firstName ?? ''
+      )
+    );
+
+    await AsyncStorage.setItem(
+      'userLastName',
+      String(
+        result.user?.lastName ?? ''
+      )
+    );
+
+    await AsyncStorage.setItem(
+      'userBio',
+      String(
+        result.user?.bio ?? ''
+      )
+    );
+
+    await AsyncStorage.setItem(
+      'userPhone',
+      String(
+        result.user?.phone ?? ''
+      )
+    );
+
+    await AsyncStorage.setItem(
+      'userGender',
+      String(
+        result.user?.gender ?? ''
+      )
+    );
+
+    await AsyncStorage.setItem(
+      'app_support_team_member',
+      String(
+        result.user?.app_support_team_member ?? ''
+      )
+    );
 
 
-    await AsyncStorage.setItem('userID', String(result.contactId ?? ''));
-    await AsyncStorage.setItem('userFirstName', String(result.user?.firstName ?? ''));
-    await AsyncStorage.setItem('userLastName', String(result.user?.lastName ?? ''));
-    await AsyncStorage.setItem('userBio', String(result.user?.bio ?? ''));
-    await AsyncStorage.setItem('userPhone', String(result.user?.phone ?? ''));
-    await AsyncStorage.setItem('userGender', String(result.user?.gender ?? ''));
-    await AsyncStorage.setItem('app_support_team_member', String(result.user?.app_support_team_member ?? ''));
+    // =====================================================
+    // SAVE FCM TOKEN
+    // =====================================================
 
-    console.log('result.user----- ', result.user);
+    try {
 
-      const userID = await AsyncStorage.getItem('userID');
-      const userFirstName = await AsyncStorage.getItem('userFirstName');
-      const userLastName = await AsyncStorage.getItem('userLastName');
-      const userBio = await AsyncStorage.getItem('userBio');
-      const userPhone = await AsyncStorage.getItem('userPhone');
-      const userGender = await AsyncStorage.getItem('userGender');
-      console.log('userID-- ', userID);
-      console.log('userFirstName-- ', userFirstName);
-      console.log('userLastName-- ', userLastName);
-      console.log('userBio-- ', userBio);
-      console.log('userPhone-- ', userPhone);
-      console.log('userGender-- ', userGender);
-    
+      console.log(
+        'Saving Customer FCM token...'
+      );
+
+      await saveFCMToken(
+        normalizedEmail
+      );
+
+      console.log(
+        'Customer FCM token save completed'
+      );
+
+    } catch (fcmError) {
+
+      console.log(
+        'Customer FCM token save error:',
+        fcmError
+      );
+
+      /*
+       * IMPORTANT:
+       * Notification setup fail hone par
+       * login block nahi hoga.
+       */
+
+    }
+
+
+    // =====================================================
+    // FCM TOKEN REFRESH LISTENER
+    // =====================================================
+
+    try {
+
+      startFCMTokenRefreshListener(
+        normalizedEmail
+      );
+
+      console.log(
+        'Customer FCM token refresh listener started'
+      );
+
+    } catch (fcmRefreshError) {
+
+      console.log(
+        'Customer FCM refresh listener error:',
+        fcmRefreshError
+      );
+
+    }
+
+
+    // =====================================================
+    // GO TO HOME
+    // =====================================================
 
     setLoading(false);
-    navigation.replace('Home');
+
+    navigation.replace(
+      'Home'
+    );
+
 
   } catch (error) {
+
+    console.log(
+      'Customer login error:',
+      error
+    );
+
     setLoading(false);
-    alert('Network error');
+
+    alert(
+      'Network error'
+    );
+
   }
+
 };
 
 
