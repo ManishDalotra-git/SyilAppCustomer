@@ -24,6 +24,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Footer from './components/Footer';
 import Video from 'react-native-video';
+import {NativeModules} from 'react-native';
 
 const ViewTicketDetail = ({ navigation }) => {
   StatusBar.setTranslucent(true);
@@ -166,6 +167,33 @@ useFocusEffect(
               'Remaining unread count:',
               markReadData.totalUnreadCount
             );
+
+            // Clear all Android notifications for this ticket
+            if (Platform.OS === 'android' && isActive) {
+              try {
+                const { NotificationBadge } = NativeModules;
+
+                if (NotificationBadge?.cancelTicketNotifications) {
+                  NotificationBadge.cancelTicketNotifications(
+                    String(ticketId)
+                  );
+
+                  console.log(
+                    'All notifications cleared for ticket:',
+                    ticketId
+                  );
+                } else {
+                  console.log(
+                    'NotificationBadge native module unavailable'
+                  );
+                }
+              } catch (notificationError) {
+                console.log(
+                  'Error clearing ticket notifications:',
+                  notificationError
+                );
+              }
+            }
           } else {
             // Organization-only tickets may return 403
             // until backend authorization is updated.
