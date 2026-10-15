@@ -16,16 +16,34 @@ import RenderHTML from 'react-native-render-html';
 import ImageViewing from 'react-native-image-viewing';
 import Video from 'react-native-video';
 import { HTMLElementModel, HTMLContentModel } from 'react-native-render-html';
+import { WebView } from 'react-native-webview';
+
 
 const KnowledgeDetail = ({ route, navigation }) => {
 
 
+  // const customHTMLElementModels = {
+  //   video: HTMLElementModel.fromCustomModel({
+  //     tagName: 'video',
+  //     contentModel: HTMLContentModel.block, // ⚠️ important
+  //   }),
+  // };
+
+
   const customHTMLElementModels = {
+
     video: HTMLElementModel.fromCustomModel({
       tagName: 'video',
-      contentModel: HTMLContentModel.block, // ⚠️ important
+      contentModel: HTMLContentModel.block,
     }),
+
+    iframe: HTMLElementModel.fromCustomModel({
+      tagName: 'iframe',
+      contentModel: HTMLContentModel.block,
+    }),
+
   };
+
 
 
   StatusBar.setTranslucent(true);
@@ -180,11 +198,202 @@ const KnowledgeDetail = ({ route, navigation }) => {
   );
 };
 
-    const renderers = useMemo(
+const IframeRenderer = ({ tnode }) => {
+
+  let uri =
+    tnode?.attributes?.src || '';
+
+  if (!uri) {
+    return null;
+  }
+
+  uri = uri.replace(
+    /&amp;/g,
+    '&'
+  );
+
+
+  /*
+   * YouTube video ID
+   */
+
+  const match =
+    uri.match(
+      /youtube\.com\/embed\/([^?&/]+)/
+    );
+
+
+  if (!match) {
+
+    console.log(
+      'Unsupported iframe:',
+      uri
+    );
+
+    return null;
+
+  }
+
+
+  const videoId =
+    match[1];
+
+
+  console.log(
+    'YouTube Video ID:',
+    videoId
+  );
+
+
+  /*
+   * Original URL me start parameter ho
+   * to preserve karenge.
+   */
+
+  let start =
+    '';
+
+  try {
+
+    const startMatch =
+      uri.match(
+        /[?&]start=(\d+)/
+      );
+
+    if (startMatch) {
+
+      start =
+        `&start=${startMatch[1]}`;
+
+    }
+
+  } catch (error) {
+
+    console.log(
+      'Start parameter error:',
+      error
+    );
+
+  }
+ 
+
+  const embedUrl =
+    `https://www.youtube.com/embed/${videoId}?playsinline=1&rel=0${start}`;
+
+
+  /*
+   * Important:
+   * iframe ko proper HTTP page context
+   * provide kar rahe hain.
+   */
+
+  const youtubeHTML = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+        />
+        <meta
+          name="referrer"
+          content="strict-origin-when-cross-origin"
+        />
+
+        <style>
+          html,
+          body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+          }
+          .video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+          }
+          iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="video-container">
+          <iframe
+            src="${embedUrl}"
+            title="YouTube video"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen
+          ></iframe>
+        </div>
+      </body>
+    </html>
+  `;
+
+
+  return (
+
+    <View
+      style={{
+        width: '100%',
+        height: 285,
+        marginVertical: 12,
+        borderRadius: 8,
+        overflow: 'hidden',
+        backgroundColor: '#000',
+      }}
+    >
+      <WebView
+        originWhitelist={[
+          '*'
+        ]}
+        source={{ html: youtubeHTML, baseUrl: 'https://syil.com', }}
+        style={{ flex: 1, backgroundColor: '#000', }}
+        javaScriptEnabled={ true }
+        domStorageEnabled={ true }
+        allowsInlineMediaPlayback={ true }
+        mediaPlaybackRequiresUserAction={ true }
+        allowsFullscreenVideo={ true }
+        mixedContentMode="always"
+        setSupportMultipleWindows={ false }
+        onError={event => { 
+          console.log( 'YouTube WebView error:',event.nativeEvent ); 
+        }}
+
+        onHttpError={event => {
+
+          console.log(
+            'YouTube HTTP error:',
+            event.nativeEvent
+          );
+
+        }}
+
+      />
+
+    </View>
+
+  );
+
+};
+
+
+  const renderers = useMemo(
     () => ({
       h3: H3Renderer,
       img: ImageRenderer,
-      video: VideoRenderer, 
+      video: VideoRenderer,
+      iframe: IframeRenderer,
     }),
     []
   );
@@ -195,7 +404,6 @@ const KnowledgeDetail = ({ route, navigation }) => {
       div: {
         wrapperComponent: ({ tnode, children }) => {
           if (tnode.attributes.class === 'rn-table') {
-            // ✅ Horizontal ScrollView for tables
             return (
               <ScrollView horizontal showsHorizontalScrollIndicator>
                 <View>{children}</View>
@@ -234,8 +442,7 @@ const KnowledgeDetail = ({ route, navigation }) => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-
-
+        
          {/* META */}
         <View style={styles.metaContainer}>
           <Text style={styles.title}>{article?.['Article title']}</Text>

@@ -364,7 +364,7 @@ useEffect(() => {
               renderItem={renderItem}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.articleListContent}
-              ListFooterComponent={<View style={{ height: 580 }} />}
+              ListFooterComponent={<View style={{ height: 750 }} />}
             />
           </View>
         </View>

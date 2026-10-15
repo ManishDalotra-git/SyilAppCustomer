@@ -87,7 +87,7 @@ console.log('email-----email---- ' , email);
       'https://syilappcustomer.onrender.com/get-owner-id',
       {
         method: 'POST',
-        headers: { 'Cont                    ent-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email }),
       }
 );
@@ -99,9 +99,17 @@ console.log('Owner status:', ownerRes.status);
 const ownerData = JSON.parse(ownerRaw);
 console.log('ownerId mila:', ownerData.OwnerUserID);
 
-const senderActorId = ownerData.OwnerUserID
-  ? `${ownerData.OwnerUserID}`
-  : '35998790';
+if (!ownerRes.ok) {
+  throw new Error(`Owner API failed: ${ownerRes.status}`);
+}
+
+const senderActorId = String(ownerData?.OwnerUserID || '').trim();
+
+if (!senderActorId) {
+  console.log('No owner ID found for:', email);
+  setTickets([]);
+  return;
+}
 
 console.log('Final senderActorId:', senderActorId);
 
@@ -122,7 +130,7 @@ console.log('Final senderActorId:', senderActorId);
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                ownerId: senderActorId || '35998790',
+                ownerId: senderActorId,
                 }),
             }
           );
@@ -135,6 +143,8 @@ console.log('Final senderActorId:', senderActorId);
 
         } catch (error) {
           console.log('Owner ticket error:', error);
+          setTickets([]);
+        } finally {
           setLoading(false);
         }
       };
@@ -375,7 +385,21 @@ console.log('Final senderActorId:', senderActorId);
                   }
                 >
                   <View style={styles.tableRow}>
-                    <Text style={styles.cellID}>#{item.ticketId}</Text>
+                    <View style={styles.ticketIdCell}>
+                      <Text style={styles.ticketIdText}>
+                        #{item.ticketId}
+                      </Text>
+
+                      {Number(item.customer_unread_count || 0) > 0 && (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadBadgeText}>
+                            {Number(item.customer_unread_count) > 99
+                              ? '99+'
+                              : Number(item.customer_unread_count)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={styles.cell}>{item.subject}</Text>
                     <Text style={styles.cell}>
                       {formatDate(item.createdDate)}
@@ -482,6 +506,41 @@ const styles = StyleSheet.create({
     },
 
 
+
+
+
+
+
+    ticketIdCell: {
+  width: '25%',
+  flexDirection: 'row',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  padding: 5,
+},
+
+ticketIdText: {
+  fontSize: 12,
+  color: '#333',
+  fontWeight: '700',
+},
+
+unreadBadge: {
+  backgroundColor: '#FFEA00',
+  borderRadius: 12,
+  minWidth: 20,
+  height: 20,
+  paddingHorizontal: 5,
+  marginLeft: 5,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+unreadBadgeText: {
+  color: '#000',
+  fontSize: 11,
+  fontWeight: '700',
+},
 
 
 

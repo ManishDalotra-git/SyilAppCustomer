@@ -250,15 +250,27 @@ useFocusEffect(
           </View>
 
           <View style={styles.fourCardsRowContent}>
-            <Text style={styles.fourCardsRowTitle}>Chat With Alex</Text>
+            <Text style={styles.fourCardsRowTitle}>Chat With SYIL</Text>
           </View>
         </Pressable>
       </View>
 
-      <View style={styles.bottomButton}>
-        <Pressable onPress={() => navigation.navigate('CustomerNewsListing')} style={styles.bottomButtonCard}>
+      <View style={styles.bottomButtonCard}>
+        <Pressable onPress={() => navigation.navigate('CustomerNewsListing')} style={styles.bottomButton}>
           <View style={styles.bottomButtonCardFlex} >
-            <Text style={styles.bottomButtonCardTitle}>Customer News</Text>
+            <Text allowFontScaling={false} style={styles.bottomButtonCardTitle}>Customer News</Text>
+          </View>
+        </Pressable>
+
+        <Pressable 
+        onPress={() =>
+                        navigation.navigate('WebViewScreen', {
+                        url: 'https://syil.com/case-studies',
+                        })
+                    }
+         style={styles.bottomButton}>
+          <View style={styles.bottomButtonCardFlex} >
+            <Text allowFontScaling={false} style={styles.bottomButtonCardTitle}>Customer Stories</Text>
           </View>
         </Pressable>
       </View>
@@ -423,6 +435,7 @@ fourCardsRow: {
     borderRadius:100,
     padding:15,
     alignItems:'center',
+    marginBottom:20,
   },
   bottomButtonCardTitle:{
     fontSize: 20,

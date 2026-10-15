@@ -3778,5 +3778,19 @@
    "Last modified date": 1777002047288,
    "Status": "PUBLISHED",
    "Archived": false
+ },
+ {
+   "Knowledge base name": "Customer Portal",
+   "Article title": "Safety Guidelines NEW",
+   "Article subtitle": "Learn the essential safety guidelines for CNC machining to protect yourself, operate equipment responsibly, and build safe habits that support every machining operation.",
+   "Article language": "en",
+   "Article URL": "https://syil.com/dealer-portal/cnc-academy/safety-guidelines",
+   "Article body": "<div class=\"hs-embed-wrapper hs-fullwidth-embed\" style=\"position: relative; overflow: hidden; width: 100%; height: auto; padding: 0px; min-width: 256px; display: block; margin: auto;\" data-service=\"youtube\" data-responsive=\"true\"><div class=\"hs-embed-content-wrapper\"><div style=\"position: relative; overflow: hidden; max-width: 100%; padding-bottom: 56.64%; margin: 0px;\"><iframe width=\"256\" height=\"145\" src=\"https://www.youtube.com/embed/U9S71BG-7l8?start=2&amp;feature=oembed\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" referrerpolicy=\"strict-origin-when-cross-origin\" allowfullscreen=\"\" title=\"SAFETY GUIDELINES | CNC Machining Academy\" style=\"position: absolute; top: 0px; left: 0px; width: 100%; height: 100%; border-width: medium; border-style: none; border-color: currentcolor; border-image: none;\"></iframe></div></div></div>\n\n<p>&nbsp;</p>",
+   "Category": "3 CNC Academy",
+   "Subcategory": "Milling 3-Axis",
+   "Keywords": "Tutorial video,CNC Academy",
+   "Last modified date": 1787303081800,
+   "Status": "PUBLISHED",
+   "Archived": false
  }
 ]

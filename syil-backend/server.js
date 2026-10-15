@@ -1,16 +1,22 @@
-
-const { initializeApp, cert } = require("firebase-admin/app");
-const { getMessaging } = require("firebase-admin/messaging");
-
-const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SDK);
-
-initializeApp({
-  credential: cert(serviceAccount),
-});
-
-console.log("Firebase Initialized Successfully");
-
 require('dotenv').config();
+
+const { initializeApp, cert, getApps } = require('firebase-admin/app');
+const { getMessaging } = require('firebase-admin/messaging');
+
+const serviceAccount = JSON.parse(
+  process.env.FIREBASE_ADMIN_SDK
+);
+
+if (!getApps().length) {
+  initializeApp({
+    credential: cert(serviceAccount),
+  });
+}
+
+console.log('Firebase Initialized Successfully');
+
+
+
 const express = require('express');
 const bodyParser = require('body-parser');
 
@@ -706,575 +712,274 @@ app.post('/remove-fcm-token', async (req, res) => {
 
 // const { getMessaging } = require("firebase-admin/messaging");
 
+
 app.post("/hubspot-webhook", async (req, res) => {
-
-  console.log(
-    "========== CUSTOMER WEBHOOK RECEIVED =========="
-  );
-
+  console.log("========== CUSTOMER WEBHOOK RECEIVED ==========");
 
   try {
-
-    // =====================================================
-    // VALIDATE WEBHOOK BODY
-    // =====================================================
-
-    if (
-      !Array.isArray(req.body) ||
-      req.body.length === 0
-    ) {
-
-      console.log(
-        "Invalid webhook body"
-      );
-
+    // STEP 1: Validate webhook
+    if (!Array.isArray(req.body) || req.body.length === 0) {
+      console.log("Invalid webhook body");
       return res.sendStatus(200);
     }
 
+    const event = req.body[0];
 
-    // =====================================================
-    // GET THREAD ID
-    // =====================================================
+    const threadId = event?.objectId;
+    const webhookMessageId = event?.messageId;
 
-    const threadId =
-      req.body[0]?.objectId;
-
-
-    if (!threadId) {
-
-      console.log(
-        "Webhook threadId missing"
-      );
-
+    if (!threadId || !webhookMessageId) {
+      console.log("Webhook threadId or messageId missing");
       return res.sendStatus(200);
     }
 
+    const fetch = (...args) =>
+      import("node-fetch").then(({ default: fetch }) =>
+        fetch(...args)
+      );
 
-    console.log(
-      "Customer webhook Thread ID:",
-      threadId
+    const headers = {
+      Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+      "Content-Type": "application/json",
+    };
+
+    // STEP 2: Get conversation messages
+    const messageResponse = await fetch(
+      `https://api.hubapi.com/conversations/v3/conversations/threads/${threadId}/messages`,
+      {
+        method: "GET",
+        headers,
+      }
     );
 
-
-    const fetch =
-      (...args) =>
-        import("node-fetch").then(
-          ({ default: fetch }) =>
-            fetch(...args)
-        );
-
-
-    // =====================================================
-    // STEP 1
-    // GET CONVERSATION MESSAGES
-    // =====================================================
-
-    const messageResponse =
-      await fetch(
-        `https://api.hubapi.com/conversations/v3/conversations/threads/${threadId}/messages`,
-        {
-          method: "GET",
-
-          headers: {
-            Authorization:
-              `Bearer ${HUBSPOT_API_KEY}`,
-          },
-        }
-      );
-
-
-    const messageData =
-      await messageResponse.json();
-
+    const messageData = await messageResponse.json();
 
     if (!messageResponse.ok) {
-
-      console.error(
-        "Unable to fetch conversation messages:",
-        messageData
-      );
-
+      console.error("Message fetch failed:", messageData);
       return res.sendStatus(200);
     }
 
+    const messages = Array.isArray(messageData.results)
+      ? messageData.results
+      : [];
 
-    const messages =
-      Array.isArray(messageData.results)
-        ? messageData.results
-        : [];
+    // STEP 3: Find exact outgoing message
+    const latestMessage = messages.find(
+      (message) =>
+        message.type === "MESSAGE" &&
+        message.direction === "OUTGOING" &&
+        String(message.id) === String(webhookMessageId)
+    );
 
-
-    // =====================================================
-    // STEP 2
-    // GET LATEST OUTGOING MESSAGE
-    // =====================================================
-
-    const outgoingMessages =
-      messages.filter(
-        message =>
-          message.type === "MESSAGE" &&
-          message.direction === "OUTGOING"
-      );
-
-
-    if (
-      outgoingMessages.length === 0
-    ) {
-
-      console.log(
-        "No outgoing message found"
-      );
-
+    if (!latestMessage) {
+      console.log("Matching outgoing message not found");
       return res.sendStatus(200);
     }
 
+    console.log("Customer message ID:", latestMessage.id);
 
-    /*
-     * Sort by createdAt so we actually get
-     * the newest outgoing message.
-     */
-
-    outgoingMessages.sort(
-      (a, b) =>
-        new Date(b.createdAt || 0).getTime() -
-        new Date(a.createdAt || 0).getTime()
-    );
-
-
-    const latestMessage =
-      outgoingMessages[0];
-
-
-    console.log(
-      "Latest outgoing message ID:",
-      latestMessage.id
-    );
-
-
-    // =====================================================
-    // STEP 3
-    // GET CUSTOMER EMAIL
-    // =====================================================
-
+    // STEP 4: Get customer email
     const recipientEmail =
-      latestMessage
-        ?.recipients?.[0]
-        ?.deliveryIdentifier
-        ?.value;
-
+      latestMessage?.recipients?.[0]?.deliveryIdentifier?.value;
 
     if (!recipientEmail) {
-
-      console.log(
-        "Recipient email not found"
-      );
-
+      console.log("Recipient email not found");
       return res.sendStatus(200);
     }
 
+    const normalizedEmail = String(recipientEmail)
+      .trim()
+      .toLowerCase();
 
-    const normalizedEmail =
-      String(recipientEmail)
+    // STEP 5: Find customer contact
+    const contactSearchResponse = await fetch(
+      "https://api.hubapi.com/crm/v3/objects/contacts/search",
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          filterGroups: [
+            {
+              filters: [
+                {
+                  propertyName: "email",
+                  operator: "EQ",
+                  value: normalizedEmail,
+                },
+              ],
+            },
+          ],
+          properties: ["firstname", "fcm_token"],
+          limit: 1,
+        }),
+      }
+    );
+
+    const contactData = await contactSearchResponse.json();
+
+    if (!contactSearchResponse.ok) {
+      console.error("Contact search failed:", contactData);
+      return res.sendStatus(200);
+    }
+
+    const contact = contactData.results?.[0];
+
+    if (!contact) {
+      console.log("Customer contact not found");
+      return res.sendStatus(200);
+    }
+
+    const fcmToken = contact.properties?.fcm_token;
+
+    // STEP 6: Find ticket using thread ID
+    const ticketSearchResponse = await fetch(
+      "https://api.hubapi.com/crm/v3/objects/tickets/search",
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          filterGroups: [
+            {
+              filters: [
+                {
+                  propertyName:
+                    "hs_conversations_originating_thread_id",
+                  operator: "EQ",
+                  value: String(threadId),
+                },
+              ],
+            },
+          ],
+          properties: [
+            "subject",
+            "customer_portal",
+            "customer_unread_count",
+            "hs_conversations_originating_thread_id",
+          ],
+          limit: 10,
+        }),
+      }
+    );
+
+    const ticketSearchData = await ticketSearchResponse.json();
+
+    if (!ticketSearchResponse.ok) {
+      console.error("Ticket search failed:", ticketSearchData);
+      return res.sendStatus(200);
+    }
+
+    // STEP 7: Customer Portal tickets only
+    const matchingTickets = Array.isArray(
+      ticketSearchData.results
+    )
+      ? ticketSearchData.results
+      : [];
+
+    const ticket = matchingTickets.find((item) => {
+      const customerPortal = String(
+        item.properties?.customer_portal || ""
+      )
         .trim()
         .toLowerCase();
 
-
-    console.log(
-      "Notification recipient:",
-      normalizedEmail
-    );
-
-
-    // =====================================================
-    // STEP 4
-    // FIND CUSTOMER CONTACT
-    // =====================================================
-
-    const contactSearchResponse =
-      await fetch(
-        "https://api.hubapi.com/crm/v3/objects/contacts/search",
-        {
-          method: "POST",
-
-          headers: {
-            Authorization:
-              `Bearer ${HUBSPOT_API_KEY}`,
-
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-
-            filterGroups: [
-              {
-                filters: [
-                  {
-                    propertyName:
-                      "email",
-
-                    operator:
-                      "EQ",
-
-                    value:
-                      normalizedEmail,
-                  },
-                ],
-              },
-            ],
-
-            properties: [
-              "firstname",
-              "fcm_token",
-            ],
-
-            limit: 1,
-
-          }),
-        }
-      );
-
-
-    const contactData =
-      await contactSearchResponse.json();
-
-
-    if (!contactSearchResponse.ok) {
-
-      console.error(
-        "Customer contact search failed:",
-        contactData
-      );
-
-      return res.sendStatus(200);
-    }
-
-
-    if (
-      !contactData.results ||
-      contactData.results.length === 0
-    ) {
-
-      console.log(
-        "Customer contact not found"
-      );
-
-      return res.sendStatus(200);
-    }
-
-
-    const contact =
-      contactData.results[0];
-
-
-    const fcmToken =
-      contact.properties?.fcm_token;
-
-
-    if (!fcmToken) {
-
-      console.log(
-        "Customer FCM token not found"
-      );
-
-      return res.sendStatus(200);
-    }
-
-
-    /*
-     * IMPORTANT:
-     * Complete FCM token log nahi karna.
-     */
-
-    console.log(
-      "Customer FCM token found"
-    );
-
-
-    // =====================================================
-    // STEP 5
-    // FIND TICKET USING CONVERSATION THREAD ID
-    // =====================================================
-    //
-    // Existing Customer server already uses:
-    //
-    // ticket.hs_conversations_originating_thread_id
-    //
-    // to get conversation thread from a ticket.
-    //
-    // Yahan same property ka reverse search kar rahe hain.
-    //
-    // =====================================================
-
-    const ticketSearchResponse =
-      await fetch(
-        "https://api.hubapi.com/crm/v3/objects/tickets/search",
-        {
-          method: "POST",
-
-          headers: {
-            Authorization:
-              `Bearer ${HUBSPOT_API_KEY}`,
-
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-
-            filterGroups: [
-              {
-                filters: [
-                  {
-                    propertyName:
-                      "hs_conversations_originating_thread_id",
-
-                    operator:
-                      "EQ",
-
-                    value:
-                      String(threadId),
-                  },
-                ],
-              },
-            ],
-
-            properties: [
-              "subject",
-              "customer_portal",
-              "hs_conversations_originating_thread_id",
-            ],
-
-            limit: 10,
-
-          }),
-        }
-      );
-
-
-    const ticketSearchData =
-      await ticketSearchResponse.json();
-
-
-    if (!ticketSearchResponse.ok) {
-
-      console.error(
-        "Ticket search by threadId failed:",
-        ticketSearchData
-      );
-
-      return res.sendStatus(200);
-    }
-
-
-    const matchingTickets =
-      Array.isArray(
-        ticketSearchData.results
-      )
-        ? ticketSearchData.results
-        : [];
-
-
-    if (
-      matchingTickets.length === 0
-    ) {
-
-      console.log(
-        `No ticket found for thread ${threadId}`
-      );
-
-      return res.sendStatus(200);
-    }
-
-
-    // =====================================================
-    // STEP 6
-    // CUSTOMER PORTAL TICKET ONLY
-    // =====================================================
-
-    const ticket =
-      matchingTickets.find(
-        item => {
-
-          const customerPortal =
-            String(
-              item.properties
-                ?.customer_portal || ""
-            )
-              .trim()
-              .toLowerCase();
-
-
-          return (
-            customerPortal === "true" ||
-            customerPortal === "yes" ||
-            customerPortal === "1"
-          );
-
-        }
-      );
-
+      return ["true", "yes", "1"].includes(customerPortal);
+    });
 
     if (!ticket) {
-
-      console.log(
-        `Thread ${threadId} is not associated with a Customer Portal ticket`
-      );
-
+      console.log("Customer Portal ticket not found");
       return res.sendStatus(200);
     }
 
+    const ticketId = String(ticket.id);
 
-    const ticketId =
-      String(ticket.id);
-
-
-    const ticketSubject =
-      String(
-        ticket.properties?.subject ||
-        "Ticket Details"
-      );
-
-
-    console.log(
-      "Customer Ticket ID:",
-      ticketId
+    const ticketSubject = String(
+      ticket.properties?.subject || "Ticket Details"
     );
 
-
-    console.log(
-      "Customer Ticket Subject:",
-      ticketSubject
+    // STEP 8: Increase customer unread count
+    const currentUnreadCount = Math.max(
+      0,
+      Number(ticket.properties?.customer_unread_count || 0) || 0
     );
 
+    const newUnreadCount = currentUnreadCount + 1;
 
-    // =====================================================
-    // STEP 7
-    // PREPARE NOTIFICATION BODY
-    // =====================================================
-
-    const notificationBody =
-      String(
-        latestMessage.text ||
-        "You have a new support message."
-      );
-
-
-    // =====================================================
-    // STEP 8
-    // SEND FIREBASE NOTIFICATION
-    // =====================================================
-
-    try {
-
-      const firebaseResponse =
-        await getMessaging().send({
-
-          token:
-            fcmToken,
-
-
-          // -------------------------------------------------
-          // Visible notification
-          // -------------------------------------------------
-
-          notification: {
-
-            title:
-              "SYIL Support",
-
-            body:
-              notificationBody,
-
+    const unreadUpdateResponse = await fetch(
+      `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}`,
+      {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          properties: {
+            customer_unread_count: String(newUnreadCount),
           },
+        }),
+      }
+    );
 
-
-          // -------------------------------------------------
-          // Navigation data
-          //
-          // Firebase data values MUST be strings.
-          // -------------------------------------------------
-
-          data: {
-
-            notificationTitle:
-              "SYIL Support",
-
-            notificationBody:
-              notificationBody,
-
-            ticketId:
-              ticketId,
-
-            ticketSubject:
-              ticketSubject,
-
-            threadId:
-              String(threadId),
-
-            messageId:
-              String(
-                latestMessage.id || ""
-              ),
-
-          },
-
-
-          // -------------------------------------------------
-          // Android priority
-          // -------------------------------------------------
-
-          android: {
-
-            priority:
-              "high",
-
-          },
-
-        });
-
-
-      console.log(
-        "Customer push sent successfully:",
-        firebaseResponse
-      );
-
-
-    } catch (firebaseError) {
-
+    if (!unreadUpdateResponse.ok) {
       console.error(
-        "Customer Firebase push error:",
-        firebaseError
+        "Customer unread count update failed:",
+        await unreadUpdateResponse.text()
       );
-
+    } else {
+      console.log(
+        `Customer Ticket ${ticketId}: Unread ${currentUnreadCount} -> ${newUnreadCount}`
+      );
     }
 
-
-    // =====================================================
-    // ALWAYS ACKNOWLEDGE HUBSPOT WEBHOOK
-    // =====================================================
-
-    return res.sendStatus(200);
-
-
-  } catch (error) {
-
-    console.error(
-      "Customer webhook error:",
-      error
+    // STEP 9: Prepare notification
+    const notificationBody = String(
+      latestMessage.text ||
+        "You have a new support message."
     );
 
+    // STEP 10: Send Firebase notification
+    if (fcmToken) {
+      try {
+        const firebaseResponse = await getMessaging().send({
+          token: fcmToken,
 
-    /*
-     * Webhook ko 200 return kar rahe hain
-     * taaki HubSpot unnecessary retries na kare.
-     */
+          notification: {
+            title: "SYIL Support",
+            body: notificationBody,
+          },
+
+          data: {
+            notificationTitle: "SYIL Support",
+            notificationBody: notificationBody,
+            ticketId: ticketId,
+            ticketSubject: ticketSubject,
+            threadId: String(threadId),
+            messageId: String(latestMessage.id || ""),
+          },
+
+          android: {
+            priority: "high",
+          },
+        });
+
+        console.log(
+          "Customer push sent successfully:",
+          firebaseResponse
+        );
+      } catch (firebaseError) {
+        console.error(
+          "Customer Firebase push error:",
+          firebaseError
+        );
+      }
+    } else {
+      console.log("Customer FCM token not found");
+    }
 
     return res.sendStatus(200);
-
+  } catch (error) {
+    console.error("Customer webhook error:", error);
+    return res.sendStatus(200);
   }
-
 });
+
 
 // Step 2: Create ticket and associate with contact
 const uploadedFiles = [];
@@ -1820,8 +1525,6 @@ app.post('/check_login_detail', async (req, res) => {
                 'phone',
                 'gender',
                 'app_support_team_member',
-
-                // Customer/Dealer app permission
                 'mobile_app_permission',
               ],
 
@@ -2450,6 +2153,7 @@ app.post('/update-profile', async (req, res) => {
 // });
 
 
+
 app.post('/get_tickets', async (req, res) => {
   const { contactId, type } = req.body;
 
@@ -2466,16 +2170,15 @@ app.post('/get_tickets', async (req, res) => {
     let ticketIds = [];
 
     // ============================
-    // 🔵 OWNED BY ME
+    // OWNED BY ME
     // ============================
     if (type === 'me') {
-
       const associationResponse = await fetch(
         `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}/associations/ticket`,
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            Authorization: `Bearer ${HUBSPOT_API_KEY}`,
             'Content-Type': 'application/json',
           },
         }
@@ -2489,17 +2192,17 @@ app.post('/get_tickets', async (req, res) => {
     }
 
     // ============================
-    // 🟢 OWNED BY ORGANIZATION
+    // OWNED BY ORGANIZATION
     // ============================
     if (type === 'org') {
 
-      // 1️⃣ GET COMPANY ID
+      // STEP 1: GET COMPANY ID
       const contactRes = await fetch(
         `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?associations=companies`,
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            Authorization: `Bearer ${HUBSPOT_API_KEY}`,
             'Content-Type': 'application/json',
           },
         }
@@ -2507,9 +2210,12 @@ app.post('/get_tickets', async (req, res) => {
 
       const contactData = await contactRes.json();
 
-      const companies = contactData?.associations?.companies?.results || [];
+      const companies =
+        contactData?.associations?.companies?.results || [];
 
-      const company = companies.find(c => c.type === 'contact_to_company');
+      const company = companies.find(
+        c => c.type === 'contact_to_company'
+      );
 
       if (!company) {
         return res.status(200).json({ tickets: [] });
@@ -2517,13 +2223,13 @@ app.post('/get_tickets', async (req, res) => {
 
       const companyId = company.id;
 
-      // 2️⃣ GET COMPANY TICKETS
+      // STEP 2: GET COMPANY TICKETS
       const companyRes = await fetch(
         `https://api.hubapi.com/crm/v3/objects/companies/${companyId}?associations=tickets`,
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            Authorization: `Bearer ${HUBSPOT_API_KEY}`,
             'Content-Type': 'application/json',
           },
         }
@@ -2531,7 +2237,8 @@ app.post('/get_tickets', async (req, res) => {
 
       const companyData = await companyRes.json();
 
-      const tickets = companyData?.associations?.tickets?.results || [];
+      const tickets =
+        companyData?.associations?.tickets?.results || [];
 
       ticketIds = tickets
         .filter(t => t.type === 'company_to_ticket')
@@ -2539,7 +2246,7 @@ app.post('/get_tickets', async (req, res) => {
     }
 
     // ============================
-    // 🚫 NO TICKETS
+    // NO TICKETS
     // ============================
     if (!ticketIds.length) {
       return res.status(200).json({
@@ -2549,15 +2256,15 @@ app.post('/get_tickets', async (req, res) => {
     }
 
     // ============================
-    // 🎯 FETCH TICKET DETAILS
+    // FETCH TICKET DETAILS
     // ============================
     const ticketPromises = ticketIds.map(ticketId =>
       fetch(
-        `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=subject,createdate,hubspot_owner_id,hs_pipeline_stage,customer_portal`,
+        `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=subject,createdate,hubspot_owner_id,hs_pipeline_stage,customer_portal,customer_unread_count`,
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            Authorization: `Bearer ${HUBSPOT_API_KEY}`,
             'Content-Type': 'application/json',
           },
         }
@@ -2566,6 +2273,9 @@ app.post('/get_tickets', async (req, res) => {
 
     const ticketResponses = await Promise.all(ticketPromises);
 
+    // ============================
+    // FORMAT TICKET RESPONSE
+    // ============================
     const formattedTickets = ticketResponses.map(ticket => ({
       ticketId: ticket.id,
       subject: ticket.properties.subject || '',
@@ -2573,6 +2283,12 @@ app.post('/get_tickets', async (req, res) => {
       ownerId: ticket.properties.hubspot_owner_id || '',
       status: ticket.properties.hs_pipeline_stage || '',
       customer_portal: ticket.properties.customer_portal || '',
+
+      // NEW: CUSTOMER UNREAD MESSAGE COUNT
+      customer_unread_count: Math.max(
+        0,
+        Number(ticket.properties.customer_unread_count || 0) || 0
+      ),
     }));
 
     return res.status(200).json({
@@ -2580,12 +2296,15 @@ app.post('/get_tickets', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in /get_tickets:', error);
+
     return res.status(500).json({
       message: 'Internal server error',
     });
   }
 });
+
+
 
 
 
@@ -2611,7 +2330,7 @@ app.post('/get_owner_ticket', async (req, res) => {
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            Authorization: `Bearer ${HUBSPOT_API_KEY}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -2627,7 +2346,7 @@ app.post('/get_owner_ticket', async (req, res) => {
               },
             ],
             limit: 100,
-            after: after,
+            ...(after ? { after } : {}),
             properties: [
               'subject',
               'content',
@@ -2636,6 +2355,9 @@ app.post('/get_owner_ticket', async (req, res) => {
               'hubspot_owner_id',
               'createdate',
               'customer_portal',
+
+              // NEW: Customer unread count
+              'customer_unread_count',
             ],
             sorts: ['createdate'],
           }),
@@ -2643,22 +2365,59 @@ app.post('/get_owner_ticket', async (req, res) => {
       );
 
       const data = await response.json();
-      console.log('data---ticketowner ', data);
 
-      allTickets = [...allTickets, ...(data.results || [])];
+      if (!response.ok) {
+        console.error(
+          'Owner ticket search failed:',
+          data
+        );
+
+        return res.status(response.status).json({
+          message: 'Unable to fetch owner tickets',
+        });
+      }
+
+      allTickets = [
+        ...allTickets,
+        ...(data.results || []),
+      ];
 
       after = data?.paging?.next?.after || null;
 
     } while (after);
 
+    // ==========================================
+    // FORMAT OWNER TICKETS
+    // ==========================================
+
     const tickets = allTickets.map(item => ({
       ticketId: item.id,
-      subject: item.properties.subject || '',
-      createdDate: item.properties.createdate || '',
-      ownerId: item.properties.hubspot_owner_id || '',
-      status: item.properties.hs_pipeline_stage || '',
-      content: item.properties.content || '',
-      customer_portal: item.properties.customer_portal || '',
+
+      subject:
+        item.properties?.subject || '',
+
+      createdDate:
+        item.properties?.createdate || '',
+
+      ownerId:
+        item.properties?.hubspot_owner_id || '',
+
+      status:
+        item.properties?.hs_pipeline_stage || '',
+
+      content:
+        item.properties?.content || '',
+
+      customer_portal:
+        item.properties?.customer_portal || '',
+
+      // NEW: Customer unread message count
+      customer_unread_count: Math.max(
+        0,
+        Number(
+          item.properties?.customer_unread_count || 0
+        ) || 0
+      ),
     }));
 
     return res.status(200).json({
@@ -2668,12 +2427,255 @@ app.post('/get_owner_ticket', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Owner Ticket Fetch Error:', error);
+    console.error(
+      'Owner Ticket Fetch Error:',
+      error
+    );
+
     return res.status(500).json({
       message: 'Internal server error',
     });
   }
 });
+
+
+
+
+
+
+
+app.post('/mark-ticket-read', async (req, res) => {
+  const { ticketId, contactId } = req.body || {};
+
+  if (!ticketId || !contactId) {
+    return res.status(400).json({
+      success: false,
+      message: 'ticketId and contactId are required',
+    });
+  }
+
+  try {
+    const fetch = (...args) =>
+      import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+    const headers = {
+      Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+      'Content-Type': 'application/json',
+    };
+
+    const isCustomerPortal = value =>
+      ['true', 'yes', '1'].includes(
+        String(value ?? '').trim().toLowerCase()
+      );
+
+    // Fetch all associations, including paginated results.
+    const getAssociationIds = async (objectType, objectId, targetType) => {
+      const ids = new Set();
+      let after = null;
+
+      do {
+        const url = new URL(
+          `https://api.hubapi.com/crm/v3/objects/${objectType}/${encodeURIComponent(String(objectId))}/associations/${targetType}`
+        );
+
+        url.searchParams.set('limit', '100');
+
+        if (after) {
+          url.searchParams.set('after', after);
+        }
+
+        const response = await fetch(url.toString(), {
+          method: 'GET',
+          headers,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          console.error('HubSpot association error:', data);
+
+          const error = new Error('Unable to fetch associations');
+          error.status = response.status;
+          throw error;
+        }
+
+        for (const item of data.results || []) {
+          const id = item.id ?? item.toObjectId;
+
+          if (id != null) {
+            ids.add(String(id));
+          }
+        }
+
+        after = data.paging?.next?.after || null;
+      } while (after);
+
+      return ids;
+    };
+
+    // STEP 1: GET CONTACT'S DIRECT TICKETS
+    const directTicketIds = await getAssociationIds(
+      'contacts',
+      contactId,
+      'tickets'
+    );
+
+    // STEP 2: GET CONTACT'S ASSOCIATED COMPANIES
+    const companyIds = await getAssociationIds(
+      'contacts',
+      contactId,
+      'companies'
+    );
+
+    // STEP 3: GET ORGANIZATION TICKETS
+    const organizationTicketIds = new Set();
+
+    for (const companyId of companyIds) {
+      const companyTickets = await getAssociationIds(
+        'companies',
+        companyId,
+        'tickets'
+      );
+
+      for (const id of companyTickets) {
+        organizationTicketIds.add(id);
+      }
+    }
+
+    // STEP 4: VERIFY TICKET BELONGS TO CONTACT OR COMPANY
+    const requestedTicketId = String(ticketId);
+
+    const isDirectTicket = directTicketIds.has(requestedTicketId);
+    const isOrganizationTicket =
+      organizationTicketIds.has(requestedTicketId);
+
+    if (!isDirectTicket && !isOrganizationTicket) {
+      return res.status(403).json({
+        success: false,
+        message:
+          'Ticket is not associated with this contact or organization',
+      });
+    }
+
+    // STEP 5: VERIFY CUSTOMER PORTAL TICKET
+    const ticketResponse = await fetch(
+      `https://api.hubapi.com/crm/v3/objects/tickets/${encodeURIComponent(requestedTicketId)}?properties=customer_portal,customer_unread_count`,
+      {
+        method: 'GET',
+        headers,
+      }
+    );
+
+    const ticketData = await ticketResponse.json();
+
+    if (!ticketResponse.ok) {
+      return res.status(ticketResponse.status).json({
+        success: false,
+        message: 'Unable to verify Customer Portal ticket',
+      });
+    }
+
+    if (!isCustomerPortal(ticketData.properties?.customer_portal)) {
+      return res.status(403).json({
+        success: false,
+        message: 'This is not a Customer Portal ticket',
+      });
+    }
+
+    // STEP 6: RESET CUSTOMER UNREAD COUNT
+    const updateResponse = await fetch(
+      `https://api.hubapi.com/crm/v3/objects/tickets/${encodeURIComponent(requestedTicketId)}`,
+      {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          properties: {
+            customer_unread_count: '0',
+          },
+        }),
+      }
+    );
+
+    if (!updateResponse.ok) {
+      console.error(
+        'Customer unread reset failed:',
+        await updateResponse.text()
+      );
+
+      return res.status(updateResponse.status).json({
+        success: false,
+        message: 'Unable to mark ticket as read',
+      });
+    }
+
+    // STEP 7: GET ALL ACCESSIBLE TICKETS
+    const allTicketIds = [
+      ...new Set([
+        ...directTicketIds,
+        ...organizationTicketIds,
+      ]),
+    ];
+
+    // STEP 8: CALCULATE REMAINING UNREAD COUNT
+    let totalUnreadCount = 0;
+
+    const ticketResults = await Promise.all(
+      allTicketIds.map(async id => {
+        const response = await fetch(
+          `https://api.hubapi.com/crm/v3/objects/tickets/${encodeURIComponent(id)}?properties=customer_portal,customer_unread_count`,
+          {
+            method: 'GET',
+            headers,
+          }
+        );
+
+        if (!response.ok) {
+          const error = new Error(
+            `Unable to fetch unread count for ticket ${id}`
+          );
+          error.status = response.status;
+          throw error;
+        }
+
+        return response.json();
+      })
+    );
+
+    for (const ticket of ticketResults) {
+      if (!isCustomerPortal(ticket.properties?.customer_portal)) {
+        continue;
+      }
+
+      totalUnreadCount += Math.max(
+        0,
+        Number(ticket.properties?.customer_unread_count || 0) || 0
+      );
+    }
+
+    console.log(
+      `Customer ticket ${requestedTicketId} marked read. Remaining unread: ${totalUnreadCount}`
+    );
+
+    // STEP 9: SUCCESS RESPONSE
+    return res.status(200).json({
+      success: true,
+      ticketUnreadCount: 0,
+      totalUnreadCount,
+    });
+
+  } catch (error) {
+    console.error('Customer mark-ticket-read error:', error);
+
+    return res.status(error.status || 500).json({
+      success: false,
+      message: 'Unable to complete mark-ticket-read request',
+    });
+  }
+});
+
+
+
+
 
 
 

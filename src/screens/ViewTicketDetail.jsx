@@ -80,32 +80,128 @@ const ViewTicketDetail = ({ navigation }) => {
   const isChen = email === 'manish.dalotra@techstriker.com';
 
   /* ================= CONVERSATION ================= */
-  useFocusEffect(
-    useCallback(() => {
-      const fetchTicketConversation = async () => {
-        if (!ticketId) return;
+ 
+/* ================= CONVERSATION ================= */
+
+useFocusEffect(
+  useCallback(() => {
+    let isActive = true;
+
+    const fetchTicketConversation = async () => {
+      if (!ticketId) return;
+
+      try {
+        setLoading(true);
+
+        // STEP 1: FETCH TICKET CONVERSATION
+        const response = await fetch(
+          'https://syilappcustomer.onrender.com/get_ticket_conversation',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ticketId,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Conversation API failed: ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+
+        if (!isActive) return;
+
+        console.log('Conversation data----- ', data);
+
+        const ticketMessages = data.messages || [];
+
+        setMessages(ticketMessages);
+
+        // STEP 2: MARK TICKET AS READ
+        // Only after conversation loads successfully.
+        const savedContactId = await AsyncStorage.getItem(
+          'userID'
+        );
+
+        if (
+          !isActive ||
+          !savedContactId ||
+          !Array.isArray(ticketMessages) ||
+          ticketMessages.length === 0
+        ) {
+          return;
+        }
+
         try {
-          setLoading(true);
-          const response = await fetch(
-            'https://syilappcustomer.onrender.com/get_ticket_conversation',
+          const markReadResponse = await fetch(
+            'https://syilappcustomer.onrender.com/mark-ticket-read',
             {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ticketId }),
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                ticketId,
+                contactId: savedContactId,
+              }),
             }
           );
-          const data = await response.json();
-          console.log('Conversation data----- ', data);
-          setMessages(data.messages || []);
-        } catch (error) {
-          console.log('Conversation fetch error', error);
-        } finally {
+
+          const markReadData =
+            await markReadResponse.json();
+
+          if (markReadResponse.ok && markReadData.success) {
+            console.log(
+              'Customer ticket marked as read:',
+              ticketId
+            );
+
+            console.log(
+              'Remaining unread count:',
+              markReadData.totalUnreadCount
+            );
+          } else {
+            // Organization-only tickets may return 403
+            // until backend authorization is updated.
+            console.log(
+              'Ticket mark-read skipped:',
+              markReadData.message ||
+                markReadResponse.status
+            );
+          }
+        } catch (markReadError) {
+          console.log(
+            'Mark ticket read error:',
+            markReadError
+          );
+        }
+
+      } catch (error) {
+        console.log(
+          'Conversation fetch error',
+          error
+        );
+      } finally {
+        if (isActive) {
           setLoading(false);
         }
-      };
-      fetchTicketConversation();
-    }, [ticketId])
-  );
+      }
+    };
+
+    fetchTicketConversation();
+
+    return () => {
+      isActive = false;
+    };
+  }, [ticketId])
+);
+
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

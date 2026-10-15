@@ -100,8 +100,8 @@ const ViewTicket = ({ navigation }) => {
                 try {
                     setLoading(true);
 
-                    //https://syilapp-w8ye.onrender.com/get_contact_tickets
-                    //http://192.168.0.84:3000
+                    //https://syilappcustomer.onrender.com
+                    //http://192.168.0.94:3000
 
                     const response = await fetch('https://syilappcustomer.onrender.com/get_tickets', {
                     method: 'POST',
@@ -380,6 +380,7 @@ const ViewTicket = ({ navigation }) => {
                     //contentContainerStyle={{ paddingBottom: 200, }}
                     contentContainerStyle={{ paddingBottom: 420, paddingTop: 0, flexDirection: 'column-reverse',}}
                     //ListFooterComponent={<View style={{ height: 290 }} />}
+                    
                     renderItem={({ item }) => (
                     <Pressable
                         onPress={() =>
@@ -390,22 +391,43 @@ const ViewTicket = ({ navigation }) => {
                         }
                     >
                         <View style={styles.tableRow}>
-                            <Text style={styles.cellID}>#{item.ticketId}</Text>
-                            <Text style={styles.cell}>{item.subject}</Text>
-                            <Text style={styles.cell}>{formatDate(item.createdDate)}</Text>
-                            <Text
-                            style={styles.cell}
-                            // style={[
-                            //     styles.cell,
-                            //     item.status === '173580713' && styles.closedStatus,
-                            // ]}
-                            >
-                            {getStatusText(item.ownerId)}
+
+                        {/* Ticket ID + Unread Badge */}
+                        <View style={styles.ticketIdContainer}>
+                            <Text style={styles.ticketIdText}>
+                            #{item.ticketId}
                             </Text>
+
+                            {Number(item.customer_unread_count || 0) > 0 && (
+                            <View style={styles.unreadBadge}>
+                                <Text style={styles.unreadBadgeText}>
+                                {Number(item.customer_unread_count) > 99
+                                    ? '99+'
+                                    : Number(item.customer_unread_count)}
+                                </Text>
+                            </View>
+                            )}
+                        </View>
+
+                        {/* Ticket Subject */}
+                        <Text style={styles.cell}>
+                            {item.subject}
+                        </Text>
+
+                        {/* Created Date */}
+                        <Text style={styles.cell}>
+                            {formatDate(item.createdDate)}
+                        </Text>
+
+                        {/* Ticket Owner */}
+                        <Text style={styles.cell}>
+                            {getStatusText(item.ownerId)}
+                        </Text>
+
                         </View>
                     </Pressable>
-
                     )}
+
                 />
 
                 {/* {!loading && tickets.length === 0 && (
@@ -507,6 +529,46 @@ const styles = StyleSheet.create({
         marginTop: 20,
         color: '#999',
     },
+
+
+
+
+
+
+
+
+    
+ticketIdContainer: {
+  width: '25%',
+  flexDirection: 'row',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  padding: 5,
+},
+
+ticketIdText: {
+  fontSize: 12,
+  color: '#333',
+  fontWeight: '700',
+},
+
+unreadBadge: {
+  backgroundColor: '#FFEA00',
+  borderRadius: 20,
+  minWidth: 20,
+  height: 20,
+  paddingHorizontal: 5,
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginLeft: 5,
+},
+
+unreadBadgeText: {
+  color: '#000',
+  fontSize: 10,
+  fontWeight: '700',
+  textAlign: 'center',
+},
 
 
 
