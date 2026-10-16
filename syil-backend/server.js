@@ -2154,8 +2154,9 @@ app.post('/update-profile', async (req, res) => {
 
 
 
+
 app.post('/get_tickets', async (req, res) => {
-  const { contactId, type } = req.body;
+  const { contactId, type } = req.body || {};
 
   if (!contactId) {
     return res.status(400).json({
@@ -2163,91 +2164,125 @@ app.post('/get_tickets', async (req, res) => {
     });
   }
 
+  if (!['me', 'org'].includes(type)) {
+    return res.status(400).json({
+      message: 'Invalid ticket type',
+    });
+  }
+
   try {
     const fetch = (...args) =>
       import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
+    const headers = {
+      Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+      'Content-Type': 'application/json',
+    };
+
+    // HubSpot API request with retry for rate limits.
+    const hubspotRequest = async (url, options = {}) => {
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const response = await fetch(url, {
+          ...options,
+          headers,
+        });
+
+        if (response.status === 429 || response.status >= 500) {
+          if (attempt < 4) {
+            const retryAfter = Number(
+              response.headers.get('retry-after')
+            );
+
+            const delay = Number.isFinite(retryAfter) && retryAfter > 0
+              ? retryAfter * 1000
+              : Math.min(1000 * 2 ** attempt, 10000);
+
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          const error = new Error(
+            `HubSpot request failed (${response.status}): ${JSON.stringify(data)}`
+          );
+          error.status = response.status;
+          throw error;
+        }
+
+        return data;
+      }
+    };
+
+    // Fetch every association page.
+    const getAllAssociatedIds = async (
+      objectType,
+      objectId,
+      targetType
+    ) => {
+      const ids = new Set();
+      let after = null;
+
+      do {
+        const url = new URL(
+          `https://api.hubapi.com/crm/v3/objects/${objectType}/${encodeURIComponent(String(objectId))}/associations/${targetType}`
+        );
+
+        url.searchParams.set('limit', '100');
+
+        if (after) {
+          url.searchParams.set('after', after);
+        }
+
+        const data = await hubspotRequest(url.toString());
+
+        for (const item of data.results || []) {
+          const id = item.id ?? item.toObjectId;
+          if (id != null) ids.add(String(id));
+        }
+
+        after = data.paging?.next?.after || null;
+      } while (after);
+
+      return [...ids];
+    };
+
     let ticketIds = [];
 
-    // ============================
-    // OWNED BY ME
-    // ============================
+    // MY TICKETS
     if (type === 'me') {
-      const associationResponse = await fetch(
-        `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}/associations/ticket`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${HUBSPOT_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-        }
+      ticketIds = await getAllAssociatedIds(
+        'contacts',
+        contactId,
+        'tickets'
       );
-
-      const associationData = await associationResponse.json();
-
-      if (associationData.results) {
-        ticketIds = associationData.results.map(item => item.id);
-      }
     }
 
-    // ============================
-    // OWNED BY ORGANIZATION
-    // ============================
+    // ORGANIZATION TICKETS
     if (type === 'org') {
-
-      // STEP 1: GET COMPANY ID
-      const contactRes = await fetch(
-        `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?associations=companies`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${HUBSPOT_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-        }
+      const companyIds = await getAllAssociatedIds(
+        'contacts',
+        contactId,
+        'companies'
       );
 
-      const contactData = await contactRes.json();
+      const allOrgTicketIds = new Set();
 
-      const companies =
-        contactData?.associations?.companies?.results || [];
+      for (const companyId of companyIds) {
+        const ids = await getAllAssociatedIds(
+          'companies',
+          companyId,
+          'tickets'
+        );
 
-      const company = companies.find(
-        c => c.type === 'contact_to_company'
-      );
-
-      if (!company) {
-        return res.status(200).json({ tickets: [] });
+        ids.forEach(id => allOrgTicketIds.add(id));
       }
 
-      const companyId = company.id;
-
-      // STEP 2: GET COMPANY TICKETS
-      const companyRes = await fetch(
-        `https://api.hubapi.com/crm/v3/objects/companies/${companyId}?associations=tickets`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${HUBSPOT_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      const companyData = await companyRes.json();
-
-      const tickets =
-        companyData?.associations?.tickets?.results || [];
-
-      ticketIds = tickets
-        .filter(t => t.type === 'company_to_ticket')
-        .map(t => t.id);
+      ticketIds = [...allOrgTicketIds];
     }
 
-    // ============================
-    // NO TICKETS
-    // ============================
     if (!ticketIds.length) {
       return res.status(200).json({
         message: 'No tickets found',
@@ -2255,51 +2290,64 @@ app.post('/get_tickets', async (req, res) => {
       });
     }
 
-    // ============================
-    // FETCH TICKET DETAILS
-    // ============================
-    const ticketPromises = ticketIds.map(ticketId =>
-      fetch(
-        `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=subject,createdate,hubspot_owner_id,hs_pipeline_stage,customer_portal,customer_unread_count`,
+    // Fetch ticket details in batches of 100.
+    const allTickets = [];
+
+    for (let i = 0; i < ticketIds.length; i += 100) {
+      const batchIds = ticketIds.slice(i, i + 100);
+
+      const data = await hubspotRequest(
+        'https://api.hubapi.com/crm/v3/objects/tickets/batch/read',
         {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${HUBSPOT_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
+          method: 'POST',
+          body: JSON.stringify({
+            properties: [
+              'subject',
+              'createdate',
+              'hubspot_owner_id',
+              'hs_pipeline_stage',
+              'customer_portal',
+              'customer_unread_count',
+            ],
+            inputs: batchIds.map(id => ({ id })),
+          }),
         }
-      ).then(res => res.json())
+      );
+
+      allTickets.push(...(data.results || []));
+    }
+
+    // Preserve the existing frontend response format.
+    const tickets = allTickets.map(ticket => {
+      const p = ticket.properties || {};
+
+      return {
+        ticketId: ticket.id,
+        subject: p.subject || '',
+        createdDate: p.createdate || '',
+        ownerId: p.hubspot_owner_id || '',
+        status: p.hs_pipeline_stage || '',
+        customer_portal: p.customer_portal || '',
+        customer_unread_count: Math.max(
+          0,
+          Number(p.customer_unread_count || 0) || 0
+        ),
+      };
+    });
+
+    console.log(
+      `/get_tickets: type=${type}, total=${tickets.length}`
     );
 
-    const ticketResponses = await Promise.all(ticketPromises);
-
-    // ============================
-    // FORMAT TICKET RESPONSE
-    // ============================
-    const formattedTickets = ticketResponses.map(ticket => ({
-      ticketId: ticket.id,
-      subject: ticket.properties.subject || '',
-      createdDate: ticket.properties.createdate || '',
-      ownerId: ticket.properties.hubspot_owner_id || '',
-      status: ticket.properties.hs_pipeline_stage || '',
-      customer_portal: ticket.properties.customer_portal || '',
-
-      // NEW: CUSTOMER UNREAD MESSAGE COUNT
-      customer_unread_count: Math.max(
-        0,
-        Number(ticket.properties.customer_unread_count || 0) || 0
-      ),
-    }));
-
     return res.status(200).json({
-      tickets: formattedTickets,
+      tickets,
     });
 
   } catch (error) {
-    console.error('Error in /get_tickets:', error);
+    console.error('/get_tickets error:', error.message);
 
-    return res.status(500).json({
-      message: 'Internal server error',
+    return res.status(error.status || 500).json({
+      message: 'Unable to fetch all tickets',
     });
   }
 });

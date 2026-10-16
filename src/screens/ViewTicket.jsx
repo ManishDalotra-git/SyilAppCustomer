@@ -115,8 +115,14 @@ const ViewTicket = ({ navigation }) => {
                     });
 
                     const data = await response.json();
-                    setTickets(data.tickets || []);
+
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Failed to fetch tickets');
+                    }
+
+                    setTickets(Array.isArray(data.tickets) ? data.tickets : []);
                     setLoading(false);
+                    
                 } catch (error) {
                     console.log('Ticket fetch error', error);
                     setLoading(false);
@@ -378,7 +384,7 @@ const ViewTicket = ({ navigation }) => {
                     showsVerticalScrollIndicator={false}
                     keyExtractor={(item) => item.ticketId}
                     //contentContainerStyle={{ paddingBottom: 200, }}
-                    contentContainerStyle={{ paddingBottom: 420, paddingTop: 0, flexDirection: 'column-reverse',}}
+                    contentContainerStyle={{ paddingBottom: 420, paddingTop: 0,}}
                     //ListFooterComponent={<View style={{ height: 290 }} />}
                     
                     renderItem={({ item }) => (
