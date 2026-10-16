@@ -136,9 +136,14 @@ console.log('Final senderActorId:', senderActorId);
           );
 
           const data = await response.json();
-          console.log('data---- ', data);
-          
-          setTickets(data.tickets || []);
+
+          if (!response.ok) {
+              throw new Error(data.message || 'Failed to fetch owner tickets');
+          }
+
+          console.log('Total owner tickets received:', data.tickets?.length || 0);
+
+          setTickets(Array.isArray(data.tickets) ? data.tickets : []);
           setLoading(false);
 
         } catch (error) {
@@ -373,7 +378,6 @@ console.log('Final senderActorId:', senderActorId);
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{
                 paddingBottom: 300,
-                flexDirection: 'column-reverse',
               }}
               renderItem={({ item }) => (
                 <Pressable
