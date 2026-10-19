@@ -117,7 +117,7 @@ const More = ({ navigation }) => {
             </View>
 
             {/* Ask Alex */}
-            {email === 'manish.dalotra@techstriker.com' && (
+            {email === 'mohit.singh@uprango.com' && (
             <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('UploadArticles')} >
                 <View style={styles.left}>
                 <Image source={require('../../images/ArticleIcon.png')} style={styles.icon} />
