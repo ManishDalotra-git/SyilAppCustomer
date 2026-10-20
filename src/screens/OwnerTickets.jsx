@@ -394,12 +394,12 @@ console.log('Final senderActorId:', senderActorId);
                         #{item.ticketId}
                       </Text>
 
-                      {Number(item.customer_unread_count || 0) > 0 && (
+                      {Number(item.support_unread_count || 0) > 0 && (
                         <View style={styles.unreadBadge}>
                           <Text style={styles.unreadBadgeText}>
-                            {Number(item.customer_unread_count) > 99
+                            {Number(item.support_unread_count) > 99
                               ? '99+'
-                              : Number(item.customer_unread_count)}
+                              : Number(item.support_unread_count)}
                           </Text>
                         </View>
                       )}

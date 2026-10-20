@@ -785,14 +785,56 @@ app.post("/hubspot-webhook", async (req, res) => {
       senderEmail: matchingMessage?.senders?.[0]?.deliveryIdentifier?.value,
     });
 
-    if (matchingMessage?.direction === "INCOMING") {
-      console.log("SUPPORT INCOMING DEBUG:", {
-        threadId: String(threadId),
-        messageId: String(webhookMessageId),
-        senderEmail:
-          matchingMessage?.senders?.[0]?.deliveryIdentifier?.value,
-      });
-    }
+    if (
+        matchingMessage?.type === "MESSAGE" &&
+        matchingMessage?.direction === "INCOMING"
+      ) {
+        console.log("SUPPORT INCOMING DEBUG:", {
+          threadId: String(threadId),
+          messageId: String(webhookMessageId),
+        });
+
+        const supportTicketResponse = await fetch(
+          "https://api.hubapi.com/crm/v3/objects/tickets/search",
+          {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              filterGroups: [{
+                filters: [{
+                  propertyName: "hs_conversations_originating_thread_id",
+                  operator: "EQ",
+                  value: String(threadId),
+                }],
+              }],
+              properties: [
+                "subject",
+                "customer_portal",
+                "hubspot_owner_id",
+                "support_unread_count",
+              ],
+              limit: 10,
+            }),
+          }
+        );
+
+        const supportTicketData = await supportTicketResponse.json();
+
+        if (!supportTicketResponse.ok) {
+          console.error("SUPPORT TICKET SEARCH ERROR:", supportTicketData);
+        } else {
+          console.log(
+            "SUPPORT TICKET MAPPING:",
+            (supportTicketData.results || []).map(ticket => ({
+              ticketId: ticket.id,
+              subject: ticket.properties?.subject,
+              customerPortal: ticket.properties?.customer_portal,
+              assignedOwnerId: ticket.properties?.hubspot_owner_id,
+              supportUnreadCount: ticket.properties?.support_unread_count,
+            }))
+          );
+        }
+      }
 
 
     const latestMessage = messages.find(
@@ -2436,6 +2478,7 @@ app.post('/get_owner_ticket', async (req, res) => {
 
               // NEW: Customer unread count
               'customer_unread_count',
+              'support_unread_count',
             ],
             sorts: ['createdate'],
           }),
@@ -2495,6 +2538,10 @@ app.post('/get_owner_ticket', async (req, res) => {
         Number(
           item.properties?.customer_unread_count || 0
         ) || 0
+      ),
+      support_unread_count: Math.max(
+        0,
+        Number(item.properties?.support_unread_count || 0) || 0
       ),
     }));
 
