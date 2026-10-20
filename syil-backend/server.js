@@ -771,6 +771,21 @@ app.post("/hubspot-webhook", async (req, res) => {
       : [];
 
     // STEP 3: Find exact outgoing message
+
+    const matchingMessage = messages.find(
+      (message) =>
+        String(message.id) === String(webhookMessageId)
+    );
+
+    console.log("MATCHED MESSAGE DEBUG:", {
+      found: !!matchingMessage,
+      id: matchingMessage?.id,
+      type: matchingMessage?.type,
+      direction: matchingMessage?.direction,
+      senderEmail: matchingMessage?.senders?.[0]?.deliveryIdentifier?.value,
+    });
+
+
     const latestMessage = messages.find(
       (message) =>
         message.type === "MESSAGE" &&
