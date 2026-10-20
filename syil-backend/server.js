@@ -713,6 +713,7 @@ app.post('/remove-fcm-token', async (req, res) => {
 // const { getMessaging } = require("firebase-admin/messaging");
 
 
+
 app.post("/hubspot-webhook", async (req, res) => {
   console.log("========== CUSTOMER WEBHOOK RECEIVED ==========");
 
@@ -770,8 +771,7 @@ app.post("/hubspot-webhook", async (req, res) => {
       ? messageData.results
       : [];
 
-    // STEP 3: Find exact outgoing message
-
+    // STEP 3: Find exact webhook message
     const matchingMessage = messages.find(
       (message) =>
         String(message.id) === String(webhookMessageId)
@@ -782,60 +782,189 @@ app.post("/hubspot-webhook", async (req, res) => {
       id: matchingMessage?.id,
       type: matchingMessage?.type,
       direction: matchingMessage?.direction,
-      senderEmail: matchingMessage?.senders?.[0]?.deliveryIdentifier?.value,
+      senderEmail:
+        matchingMessage?.senders?.[0]?.deliveryIdentifier?.value,
     });
 
-    if (
-        matchingMessage?.type === "MESSAGE" &&
-        matchingMessage?.direction === "INCOMING"
-      ) {
-        console.log("SUPPORT INCOMING DEBUG:", {
-          threadId: String(threadId),
-          messageId: String(webhookMessageId),
-        });
+    // =====================================================
+    // SUPPORT MEMBER: INCOMING CUSTOMER MESSAGE
+    // =====================================================
 
-        const supportTicketResponse = await fetch(
-          "https://api.hubapi.com/crm/v3/objects/tickets/search",
-          {
-            method: "POST",
-            headers,
-            body: JSON.stringify({
-              filterGroups: [{
-                filters: [{
-                  propertyName: "hs_conversations_originating_thread_id",
-                  operator: "EQ",
-                  value: String(threadId),
-                }],
-              }],
-              properties: [
-                "subject",
-                "customer_portal",
-                "hubspot_owner_id",
-                "support_unread_count",
-              ],
-              limit: 10,
-            }),
-          }
+    if (
+      matchingMessage?.type === "MESSAGE" &&
+      matchingMessage?.direction === "INCOMING"
+    ) {
+      console.log("SUPPORT INCOMING DEBUG:", {
+        threadId: String(threadId),
+        messageId: String(webhookMessageId),
+      });
+
+      // Find ticket by conversation thread
+      const supportTicketResponse = await fetch(
+        "https://api.hubapi.com/crm/v3/objects/tickets/search",
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            filterGroups: [
+              {
+                filters: [
+                  {
+                    propertyName:
+                      "hs_conversations_originating_thread_id",
+                    operator: "EQ",
+                    value: String(threadId),
+                  },
+                ],
+              },
+            ],
+            properties: [
+              "subject",
+              "customer_portal",
+              "hubspot_owner_id",
+              "support_unread_count",
+            ],
+            limit: 10,
+          }),
+        }
+      );
+
+      const supportTicketData =
+        await supportTicketResponse.json();
+
+      if (!supportTicketResponse.ok) {
+        console.error(
+          "SUPPORT TICKET SEARCH ERROR:",
+          supportTicketData
+        );
+      } else {
+        console.log(
+          "SUPPORT TICKET MAPPING:",
+          (supportTicketData.results || []).map((ticket) => ({
+            ticketId: ticket.id,
+            subject: ticket.properties?.subject,
+            customerPortal:
+              ticket.properties?.customer_portal,
+            assignedOwnerId:
+              ticket.properties?.hubspot_owner_id,
+            supportUnreadCount:
+              ticket.properties?.support_unread_count,
+          }))
         );
 
-        const supportTicketData = await supportTicketResponse.json();
+        // Find Customer Portal ticket
+        const supportTicket = (
+          supportTicketData.results || []
+        ).find((ticket) =>
+          ["true", "yes", "1"].includes(
+            String(
+              ticket.properties?.customer_portal || ""
+            )
+              .trim()
+              .toLowerCase()
+          )
+        );
 
-        if (!supportTicketResponse.ok) {
-          console.error("SUPPORT TICKET SEARCH ERROR:", supportTicketData);
+        if (supportTicket) {
+          const assignedOwnerId =
+            supportTicket.properties?.hubspot_owner_id;
+
+          if (assignedOwnerId) {
+            // STEP 4: Get assigned HubSpot owner
+            const ownerResponse = await fetch(
+              `https://api.hubapi.com/crm/v3/owners/${assignedOwnerId}`,
+              {
+                method: "GET",
+                headers,
+              }
+            );
+
+            const ownerData = await ownerResponse.json();
+
+            if (ownerResponse.ok && ownerData.email) {
+              const ownerEmail = String(ownerData.email)
+                .trim()
+                .toLowerCase();
+
+              // STEP 5: Find owner contact and FCM token
+              const contactResponse = await fetch(
+                "https://api.hubapi.com/crm/v3/objects/contacts/search",
+                {
+                  method: "POST",
+                  headers,
+                  body: JSON.stringify({
+                    filterGroups: [
+                      {
+                        filters: [
+                          {
+                            propertyName: "email",
+                            operator: "EQ",
+                            value: ownerEmail,
+                          },
+                        ],
+                      },
+                    ],
+                    properties: [
+                      "email",
+                      "fcm_token",
+                      "app_support_team_member",
+                    ],
+                    limit: 1,
+                  }),
+                }
+              );
+
+              const contactData =
+                await contactResponse.json();
+
+              if (contactResponse.ok) {
+                const supportContact =
+                  contactData.results?.[0];
+
+                console.log(
+                  "SUPPORT OWNER CONTACT DEBUG:",
+                  {
+                    ticketId: supportTicket.id,
+                    ownerId: assignedOwnerId,
+                    ownerEmail,
+                    contactFound: !!supportContact,
+                    isSupportMember:
+                      supportContact?.properties
+                        ?.app_support_team_member,
+                    hasFcmToken:
+                      !!supportContact?.properties
+                        ?.fcm_token,
+                  }
+                );
+              } else {
+                console.error(
+                  "SUPPORT CONTACT SEARCH ERROR:",
+                  contactData
+                );
+              }
+            } else {
+              console.error(
+                "SUPPORT OWNER LOOKUP ERROR:",
+                ownerData
+              );
+            }
+          } else {
+            console.log(
+              "SUPPORT: Ticket has no assigned owner"
+            );
+          }
         } else {
           console.log(
-            "SUPPORT TICKET MAPPING:",
-            (supportTicketData.results || []).map(ticket => ({
-              ticketId: ticket.id,
-              subject: ticket.properties?.subject,
-              customerPortal: ticket.properties?.customer_portal,
-              assignedOwnerId: ticket.properties?.hubspot_owner_id,
-              supportUnreadCount: ticket.properties?.support_unread_count,
-            }))
+            "SUPPORT: Customer Portal ticket not found"
           );
         }
       }
+    }
 
+    // =====================================================
+    // EXISTING CUSTOMER NOTIFICATION LOGIC
+    // DO NOT CHANGE
+    // =====================================================
 
     const latestMessage = messages.find(
       (message) =>
@@ -934,10 +1063,14 @@ app.post("/hubspot-webhook", async (req, res) => {
       }
     );
 
-    const ticketSearchData = await ticketSearchResponse.json();
+    const ticketSearchData =
+      await ticketSearchResponse.json();
 
     if (!ticketSearchResponse.ok) {
-      console.error("Ticket search failed:", ticketSearchData);
+      console.error(
+        "Ticket search failed:",
+        ticketSearchData
+      );
       return res.sendStatus(200);
     }
 
@@ -955,11 +1088,15 @@ app.post("/hubspot-webhook", async (req, res) => {
         .trim()
         .toLowerCase();
 
-      return ["true", "yes", "1"].includes(customerPortal);
+      return ["true", "yes", "1"].includes(
+        customerPortal
+      );
     });
 
     if (!ticket) {
-      console.log("Customer Portal ticket not found");
+      console.log(
+        "Customer Portal ticket not found"
+      );
       return res.sendStatus(200);
     }
 
@@ -972,7 +1109,9 @@ app.post("/hubspot-webhook", async (req, res) => {
     // STEP 8: Increase customer unread count
     const currentUnreadCount = Math.max(
       0,
-      Number(ticket.properties?.customer_unread_count || 0) || 0
+      Number(
+        ticket.properties?.customer_unread_count || 0
+      ) || 0
     );
 
     const newUnreadCount = currentUnreadCount + 1;
@@ -984,7 +1123,8 @@ app.post("/hubspot-webhook", async (req, res) => {
         headers,
         body: JSON.stringify({
           properties: {
-            customer_unread_count: String(newUnreadCount),
+            customer_unread_count:
+              String(newUnreadCount),
           },
         }),
       }
@@ -1010,26 +1150,27 @@ app.post("/hubspot-webhook", async (req, res) => {
     // STEP 10: Send Firebase notification
     if (fcmToken) {
       try {
-        
-        const firebaseResponse = await getMessaging().send({
-          token: fcmToken,
+        const firebaseResponse =
+          await getMessaging().send({
+            token: fcmToken,
 
-          // Data-only message: Android native service
-          // will create the ticket-specific notification.
-          data: {
-            notificationTitle: "SYIL Support",
-            notificationBody: notificationBody,
-            ticketId: String(ticketId),
-            ticketSubject: String(ticketSubject),
-            threadId: String(threadId),
-            messageId: String(latestMessage.id || ""),
-          },
+            // Data-only message: Android native service
+            // creates ticket-specific notification
+            data: {
+              notificationTitle: "SYIL Support",
+              notificationBody: notificationBody,
+              ticketId: String(ticketId),
+              ticketSubject: String(ticketSubject),
+              threadId: String(threadId),
+              messageId: String(
+                latestMessage.id || ""
+              ),
+            },
 
-          android: {
-            priority: "high",
-          },
-        });
-
+            android: {
+              priority: "high",
+            },
+          });
 
         console.log(
           "Customer push sent successfully:",
@@ -1042,15 +1183,21 @@ app.post("/hubspot-webhook", async (req, res) => {
         );
       }
     } else {
-      console.log("Customer FCM token not found");
+      console.log(
+        "Customer FCM token not found"
+      );
     }
 
     return res.sendStatus(200);
   } catch (error) {
-    console.error("Customer webhook error:", error);
+    console.error(
+      "Customer webhook error:",
+      error
+    );
     return res.sendStatus(200);
   }
 });
+
 
 
 // Step 2: Create ticket and associate with contact
