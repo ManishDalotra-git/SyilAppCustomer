@@ -937,19 +937,17 @@ app.post("/hubspot-webhook", async (req, res) => {
     // STEP 10: Send Firebase notification
     if (fcmToken) {
       try {
+        
         const firebaseResponse = await getMessaging().send({
           token: fcmToken,
 
-          notification: {
-            title: "SYIL Support",
-            body: notificationBody,
-          },
-
+          // Data-only message: Android native service
+          // will create the ticket-specific notification.
           data: {
             notificationTitle: "SYIL Support",
             notificationBody: notificationBody,
-            ticketId: ticketId,
-            ticketSubject: ticketSubject,
+            ticketId: String(ticketId),
+            ticketSubject: String(ticketSubject),
             threadId: String(threadId),
             messageId: String(latestMessage.id || ""),
           },
@@ -958,6 +956,7 @@ app.post("/hubspot-webhook", async (req, res) => {
             priority: "high",
           },
         });
+
 
         console.log(
           "Customer push sent successfully:",
