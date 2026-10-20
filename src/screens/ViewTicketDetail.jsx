@@ -166,75 +166,50 @@ useFocusEffect(
             Boolean(NativeModules.NotificationBadge?.cancelTicketNotifications)
           );
 
+          
           if (markReadResponse.ok && markReadData.success) {
-            console.log(
-              'Customer ticket marked as read:',
-              ticketId
-            );
+            console.log('TICKET MARKED AS READ:', {
+              ticketId: String(ticketId),
+              role: markReadData.role,
+              ticketUnreadCount: markReadData.ticketUnreadCount,
+              totalUnreadCount: markReadData.totalUnreadCount,
+            });
 
-            console.log(
-              'Remaining unread count:',
-              markReadData.totalUnreadCount
-            );
+            // Clear Android notifications for this specific ticket.
+            // Works for both customer and assigned support member.
+            if (Platform.OS === 'android' && isActive) {
+              try {
+                const { NotificationBadge } = NativeModules;
 
-            // Clear all Android notifications for this ticket
-            
-          if (Platform.OS === 'android' && isActive) {
-            try {
-              const { NotificationBadge } = NativeModules;
+                if (NotificationBadge?.cancelTicketNotifications) {
+                  const result =
+                    await NotificationBadge.cancelTicketNotifications(
+                      String(ticketId)
+                    );
 
-              if (!NotificationBadge?.cancelTicketNotifications) {
-                Alert.alert(
-                  'Notification Debug',
-                  'NotificationBadge native module unavailable.'
-                );
-              } else {
-                const result =
-                  await NotificationBadge.cancelTicketNotifications(
-                    String(ticketId)
-                  );
-
-                console.log(
-                  'Ticket notification cancellation:',
-                  result
-                );
-
-                if (isActive) {
-                  Alert.alert(
-                    'Notification Debug',
-                    `Ticket: ${result.ticketId}\n` +
-                    `Active: ${result.activeCount}\n` +
-                    `Cancelled: ${result.cancelledCount}\n\n` +
-                    `Tags:\n${(result.activeTags || []).join('\n')}`
+                  console.log('TICKET NOTIFICATIONS CLEARED:', {
+                    ticketId: String(ticketId),
+                    role: markReadData.role,
+                    result,
+                  });
+                } else {
+                  console.log(
+                    'NotificationBadge native module unavailable'
                   );
                 }
-              }
-            } catch (notificationError) {
-              console.log(
-                'Notification cancellation failed:',
-                notificationError
-              );
-
-              if (isActive) {
-                Alert.alert(
-                  'Notification Error',
-                  String(
-                    notificationError?.message ||
-                    notificationError
-                  )
+              } catch (notificationError) {
+                console.log(
+                  'Ticket notification cancellation failed:',
+                  notificationError
                 );
               }
             }
-          }
-
           } else {
-            // Organization-only tickets may return 403
-            // until backend authorization is updated.
-            console.log(
-              'Ticket mark-read skipped:',
-              markReadData.message ||
-                markReadResponse.status
-            );
+            console.log('TICKET MARK READ FAILED:', {
+              ticketId: String(ticketId),
+              status: markReadResponse.status,
+              message: markReadData.message,
+            });
           }
         } catch (markReadError) {
           console.log(
@@ -327,7 +302,7 @@ useFocusEffect(
       (response) => {
         if (response.didCancel) return;
         if (response.errorCode) {
-          Alert.alert('Error', response.errorMessage);
+          //Alert.alert('Error', response.errorMessage);
           return;
         }
         if (response.assets && response.assets.length > 0) {
@@ -351,7 +326,7 @@ useFocusEffect(
   /* ================= SEND TO CUSTOMER ================= */
   const sendToCustomer = async () => {
     if (!messageText.trim()) {
-      Alert.alert('Error', 'Message is required');
+      //Alert.alert('Error', 'Message is required');
       return;
     }
 
@@ -445,18 +420,18 @@ console.log('Selected files before upload:', selectedFiles);
       console.log('Send response', sendData);
 
       if (sendData.success) {
-        Alert.alert('Success', 'Message sent successfully!');
+        //Alert.alert('Success', 'Message sent successfully!');
         setReplyModalVisible(false);
         setMessageText('');
         setSelectedFiles([]);
         attachmentIds = [];
         onRefresh();
       } else {
-        Alert.alert('Error', 'Message not sent. Please try again.');
+        //Alert.alert('Error', 'Message not sent. Please try again.');
       }
     } catch (err) {
       console.log('Send error', err);
-      Alert.alert('Error', 'An error occurred while sending the message. Please try again.');
+      //Alert.alert('Error', 'An error occurred while sending the message. Please try again.');
     } finally {
       setSending(false);
     }

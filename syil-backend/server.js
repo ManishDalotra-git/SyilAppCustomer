@@ -2831,6 +2831,7 @@ app.post('/get_owner_ticket', async (req, res) => {
 
 
 
+
 app.post('/mark-ticket-read', async (req, res) => {
   const { ticketId, contactId } = req.body || {};
 
@@ -2850,13 +2851,57 @@ app.post('/mark-ticket-read', async (req, res) => {
       'Content-Type': 'application/json',
     };
 
-    const isCustomerPortal = value =>
+    const requestedTicketId = String(ticketId);
+    const requestedContactId = String(contactId);
+
+    const isTrue = value =>
       ['true', 'yes', '1'].includes(
         String(value ?? '').trim().toLowerCase()
       );
 
-    // Fetch all associations, including paginated results.
-    const getAssociationIds = async (objectType, objectId, targetType) => {
+    // STEP 1: Fetch contact and ticket
+    const [contactResponse, ticketResponse] = await Promise.all([
+      fetch(
+        `https://api.hubapi.com/crm/v3/objects/contacts/${encodeURIComponent(requestedContactId)}?properties=email,app_support_team_member`,
+        { method: 'GET', headers }
+      ),
+      fetch(
+        `https://api.hubapi.com/crm/v3/objects/tickets/${encodeURIComponent(requestedTicketId)}?properties=customer_portal,customer_unread_count,support_unread_count,hubspot_owner_id`,
+        { method: 'GET', headers }
+      ),
+    ]);
+
+    if (!contactResponse.ok || !ticketResponse.ok) {
+      console.error('MARK READ LOOKUP FAILED:', {
+        contactStatus: contactResponse.status,
+        ticketStatus: ticketResponse.status,
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to verify contact or ticket',
+      });
+    }
+
+    const contactData = await contactResponse.json();
+    const ticketData = await ticketResponse.json();
+
+    if (!isTrue(ticketData.properties?.customer_portal)) {
+      return res.status(403).json({
+        success: false,
+        message: 'This is not a Customer Portal ticket',
+      });
+    }
+
+    const isSupportMember = isTrue(
+      contactData.properties?.app_support_team_member
+    );
+
+    const getAssociationIds = async (
+      objectType,
+      objectId,
+      targetType
+    ) => {
       const ids = new Set();
       let after = null;
 
@@ -2876,15 +2921,15 @@ app.post('/mark-ticket-read', async (req, res) => {
           headers,
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
-          console.error('HubSpot association error:', data);
-
-          const error = new Error('Unable to fetch associations');
+          const error = new Error(
+            'Unable to fetch ticket associations'
+          );
           error.status = response.status;
           throw error;
         }
+
+        const data = await response.json();
 
         for (const item of data.results || []) {
           const id = item.id ?? item.toObjectId;
@@ -2900,21 +2945,166 @@ app.post('/mark-ticket-read', async (req, res) => {
       return ids;
     };
 
-    // STEP 1: GET CONTACT'S DIRECT TICKETS
+    // STEP 2: SUPPORT MEMBER
+    if (isSupportMember) {
+      const ownerId = String(
+        ticketData.properties?.hubspot_owner_id || ''
+      ).trim();
+
+      const contactEmail = String(
+        contactData.properties?.email || ''
+      ).trim().toLowerCase();
+
+      if (!ownerId || !contactEmail) {
+        return res.status(403).json({
+          success: false,
+          message: 'Support owner or contact email missing',
+        });
+      }
+
+      // Verify this contact is the assigned ticket owner
+      const ownerResponse = await fetch(
+        `https://api.hubapi.com/crm/v3/owners/${encodeURIComponent(ownerId)}`,
+        {
+          method: 'GET',
+          headers,
+        }
+      );
+
+      if (!ownerResponse.ok) {
+        return res.status(ownerResponse.status).json({
+          success: false,
+          message: 'Unable to verify assigned support owner',
+        });
+      }
+
+      const ownerData = await ownerResponse.json();
+
+      const ownerEmail = String(
+        ownerData.email || ''
+      ).trim().toLowerCase();
+
+      if (!ownerEmail || ownerEmail !== contactEmail) {
+        return res.status(403).json({
+          success: false,
+          message: 'Ticket is not assigned to this support member',
+        });
+      }
+
+      // Reset ONLY support unread count
+      const updateResponse = await fetch(
+        `https://api.hubapi.com/crm/v3/objects/tickets/${encodeURIComponent(requestedTicketId)}`,
+        {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({
+            properties: {
+              support_unread_count: '0',
+            },
+          }),
+        }
+      );
+
+      if (!updateResponse.ok) {
+        console.error(
+          'SUPPORT UNREAD RESET ERROR:',
+          await updateResponse.text()
+        );
+
+        return res.status(updateResponse.status).json({
+          success: false,
+          message: 'Unable to reset support unread count',
+        });
+      }
+
+      // Calculate remaining unread on assigned tickets
+      let totalUnreadCount = 0;
+      let after = null;
+
+      do {
+        const searchResponse = await fetch(
+          'https://api.hubapi.com/crm/v3/objects/tickets/search',
+          {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              filterGroups: [{
+                filters: [{
+                  propertyName: 'hubspot_owner_id',
+                  operator: 'EQ',
+                  value: ownerId,
+                }],
+              }],
+              properties: [
+                'customer_portal',
+                'support_unread_count',
+              ],
+              limit: 200,
+              ...(after ? { after } : {}),
+            }),
+          }
+        );
+
+        if (!searchResponse.ok) {
+          console.error(
+            'SUPPORT TOTAL UNREAD ERROR:',
+            await searchResponse.text()
+          );
+
+          return res.status(502).json({
+            success: false,
+            message: 'Ticket marked read, but total unread could not be calculated',
+          });
+        }
+
+        const searchData = await searchResponse.json();
+
+        for (const ticket of searchData.results || []) {
+          if (!isTrue(ticket.properties?.customer_portal)) {
+            continue;
+          }
+
+          totalUnreadCount += Math.max(
+            0,
+            Number(
+              ticket.properties?.support_unread_count || 0
+            ) || 0
+          );
+        }
+
+        after = searchData.paging?.next?.after || null;
+      } while (after);
+
+      console.log('SUPPORT TICKET MARKED READ:', {
+        ticketId: requestedTicketId,
+        ownerId,
+        totalUnreadCount,
+      });
+
+      return res.status(200).json({
+        success: true,
+        role: 'support',
+        ticketUnreadCount: 0,
+        totalUnreadCount,
+      });
+    }
+
+    // =====================================================
+    // STEP 3: EXISTING CUSTOMER ACCESS VERIFICATION
+    // =====================================================
+
     const directTicketIds = await getAssociationIds(
       'contacts',
-      contactId,
+      requestedContactId,
       'tickets'
     );
 
-    // STEP 2: GET CONTACT'S ASSOCIATED COMPANIES
     const companyIds = await getAssociationIds(
       'contacts',
-      contactId,
+      requestedContactId,
       'companies'
     );
 
-    // STEP 3: GET ORGANIZATION TICKETS
     const organizationTicketIds = new Set();
 
     for (const companyId of companyIds) {
@@ -2929,10 +3119,9 @@ app.post('/mark-ticket-read', async (req, res) => {
       }
     }
 
-    // STEP 4: VERIFY TICKET BELONGS TO CONTACT OR COMPANY
-    const requestedTicketId = String(ticketId);
+    const isDirectTicket =
+      directTicketIds.has(requestedTicketId);
 
-    const isDirectTicket = directTicketIds.has(requestedTicketId);
     const isOrganizationTicket =
       organizationTicketIds.has(requestedTicketId);
 
@@ -2944,32 +3133,7 @@ app.post('/mark-ticket-read', async (req, res) => {
       });
     }
 
-    // STEP 5: VERIFY CUSTOMER PORTAL TICKET
-    const ticketResponse = await fetch(
-      `https://api.hubapi.com/crm/v3/objects/tickets/${encodeURIComponent(requestedTicketId)}?properties=customer_portal,customer_unread_count`,
-      {
-        method: 'GET',
-        headers,
-      }
-    );
-
-    const ticketData = await ticketResponse.json();
-
-    if (!ticketResponse.ok) {
-      return res.status(ticketResponse.status).json({
-        success: false,
-        message: 'Unable to verify Customer Portal ticket',
-      });
-    }
-
-    if (!isCustomerPortal(ticketData.properties?.customer_portal)) {
-      return res.status(403).json({
-        success: false,
-        message: 'This is not a Customer Portal ticket',
-      });
-    }
-
-    // STEP 6: RESET CUSTOMER UNREAD COUNT
+    // STEP 4: Reset ONLY customer unread count
     const updateResponse = await fetch(
       `https://api.hubapi.com/crm/v3/objects/tickets/${encodeURIComponent(requestedTicketId)}`,
       {
@@ -2985,17 +3149,17 @@ app.post('/mark-ticket-read', async (req, res) => {
 
     if (!updateResponse.ok) {
       console.error(
-        'Customer unread reset failed:',
+        'CUSTOMER UNREAD RESET ERROR:',
         await updateResponse.text()
       );
 
       return res.status(updateResponse.status).json({
         success: false,
-        message: 'Unable to mark ticket as read',
+        message: 'Unable to mark customer ticket as read',
       });
     }
 
-    // STEP 7: GET ALL ACCESSIBLE TICKETS
+    // STEP 5: Calculate remaining customer unread
     const allTicketIds = [
       ...new Set([
         ...directTicketIds,
@@ -3003,7 +3167,6 @@ app.post('/mark-ticket-read', async (req, res) => {
       ]),
     ];
 
-    // STEP 8: CALCULATE REMAINING UNREAD COUNT
     let totalUnreadCount = 0;
 
     const ticketResults = await Promise.all(
@@ -3029,29 +3192,32 @@ app.post('/mark-ticket-read', async (req, res) => {
     );
 
     for (const ticket of ticketResults) {
-      if (!isCustomerPortal(ticket.properties?.customer_portal)) {
+      if (!isTrue(ticket.properties?.customer_portal)) {
         continue;
       }
 
       totalUnreadCount += Math.max(
         0,
-        Number(ticket.properties?.customer_unread_count || 0) || 0
+        Number(
+          ticket.properties?.customer_unread_count || 0
+        ) || 0
       );
     }
 
-    console.log(
-      `Customer ticket ${requestedTicketId} marked read. Remaining unread: ${totalUnreadCount}`
-    );
+    console.log('CUSTOMER TICKET MARKED READ:', {
+      ticketId: requestedTicketId,
+      totalUnreadCount,
+    });
 
-    // STEP 9: SUCCESS RESPONSE
     return res.status(200).json({
       success: true,
+      role: 'customer',
       ticketUnreadCount: 0,
       totalUnreadCount,
     });
 
   } catch (error) {
-    console.error('Customer mark-ticket-read error:', error);
+    console.error('MARK TICKET READ ERROR:', error);
 
     return res.status(error.status || 500).json({
       success: false,
@@ -3059,6 +3225,7 @@ app.post('/mark-ticket-read', async (req, res) => {
     });
   }
 });
+
 
 
 
