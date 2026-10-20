@@ -886,6 +886,7 @@ app.post("/hubspot-webhook", async (req, res) => {
                 .trim()
                 .toLowerCase();
 
+              await new Promise((resolve) => setTimeout(resolve, 1500));
               // STEP 5: Find owner contact and FCM token
               const contactResponse = await fetch(
                 "https://api.hubapi.com/crm/v3/objects/contacts/search",
