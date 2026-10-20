@@ -1147,6 +1147,14 @@ app.post("/hubspot-webhook", async (req, res) => {
 
     const fcmToken = contact.properties?.fcm_token;
 
+    console.log("CUSTOMER FCM DEBUG:", {
+      recipientEmail: normalizedEmail,
+      contactId: contact.id,
+      contactName: contact.properties?.firstname,
+      hasFcmToken: !!fcmToken,
+      tokenLength: fcmToken ? String(fcmToken).length : 0,
+    });
+
     // STEP 10: Find ticket using thread ID
     const ticketSearchResponse = await fetch(
       "https://api.hubapi.com/crm/v3/objects/tickets/search",
