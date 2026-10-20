@@ -157,6 +157,15 @@ useFocusEffect(
           const markReadData =
             await markReadResponse.json();
 
+
+            console.log('MARK READ API STATUS:', markReadResponse.status);
+          console.log('MARK READ API RESPONSE:', JSON.stringify(markReadData));
+          console.log('CURRENT TICKET ID:', String(ticketId));
+          console.log(
+            'NOTIFICATION BADGE MODULE:',
+            Boolean(NativeModules.NotificationBadge?.cancelTicketNotifications)
+          );
+
           if (markReadResponse.ok && markReadData.success) {
             console.log(
               'Customer ticket marked as read:',
@@ -169,31 +178,55 @@ useFocusEffect(
             );
 
             // Clear all Android notifications for this ticket
-            if (Platform.OS === 'android' && isActive) {
-              try {
-                const { NotificationBadge } = NativeModules;
+            
+          if (Platform.OS === 'android' && isActive) {
+            try {
+              const { NotificationBadge } = NativeModules;
 
-                if (NotificationBadge?.cancelTicketNotifications) {
-                  NotificationBadge.cancelTicketNotifications(
+              if (!NotificationBadge?.cancelTicketNotifications) {
+                Alert.alert(
+                  'Notification Debug',
+                  'NotificationBadge native module unavailable.'
+                );
+              } else {
+                const result =
+                  await NotificationBadge.cancelTicketNotifications(
                     String(ticketId)
                   );
 
-                  console.log(
-                    'All notifications cleared for ticket:',
-                    ticketId
-                  );
-                } else {
-                  console.log(
-                    'NotificationBadge native module unavailable'
+                console.log(
+                  'Ticket notification cancellation:',
+                  result
+                );
+
+                if (isActive) {
+                  Alert.alert(
+                    'Notification Debug',
+                    `Ticket: ${result.ticketId}\n` +
+                    `Active: ${result.activeCount}\n` +
+                    `Cancelled: ${result.cancelledCount}\n\n` +
+                    `Tags:\n${(result.activeTags || []).join('\n')}`
                   );
                 }
-              } catch (notificationError) {
-                console.log(
-                  'Error clearing ticket notifications:',
-                  notificationError
+              }
+            } catch (notificationError) {
+              console.log(
+                'Notification cancellation failed:',
+                notificationError
+              );
+
+              if (isActive) {
+                Alert.alert(
+                  'Notification Error',
+                  String(
+                    notificationError?.message ||
+                    notificationError
+                  )
                 );
               }
             }
+          }
+
           } else {
             // Organization-only tickets may return 403
             // until backend authorization is updated.

@@ -1,3 +1,4 @@
+
 package com.syilreact.customer
 
 import android.app.NotificationManager
@@ -7,22 +8,17 @@ import android.util.Log
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.ReactContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import java.lang.ref.WeakReference
 
-
 class NotificationBadgeModule(
     reactContext: ReactApplicationContext
 ) : ReactContextBaseJavaModule(reactContext) {
 
-
     init {
-
-        reactContextReference =
-            WeakReference(reactContext)
+        reactContextReference = WeakReference(reactContext)
 
         Log.d(
             TAG,
@@ -30,92 +26,58 @@ class NotificationBadgeModule(
         )
     }
 
-
     // ========================================================
     // MODULE NAME
     // ========================================================
 
     override fun getName(): String {
-
         return "NotificationBadge"
     }
-
 
     // ========================================================
     // GET PENDING NOTIFICATION
     // ========================================================
 
     @ReactMethod
-    fun getPendingNotification(
-        promise: Promise
-    ) {
-
+    fun getPendingNotification(promise: Promise) {
         try {
-
             synchronized(lock) {
+                val ticketId = pendingTicketId
 
-                val ticketId =
-                    pendingTicketId
-
-
-                if (
-                    ticketId.isNullOrEmpty()
-                ) {
-
+                if (ticketId.isNullOrEmpty()) {
                     promise.resolve(null)
-
                     return
                 }
 
+                val result = Arguments.createMap()
 
-                val result =
-                    Arguments.createMap()
-
-
-                result.putString(
-                    "ticketId",
-                    ticketId
-                )
-
+                result.putString("ticketId", ticketId)
 
                 result.putString(
                     "ticketSubject",
                     pendingTicketSubject ?: ""
                 )
 
-
                 result.putString(
                     "threadId",
                     pendingThreadId ?: ""
                 )
-
 
                 result.putBoolean(
                     "fromNotification",
                     true
                 )
 
-
-                // --------------------------------------------
-                // Clear pending notification after reading it
-                // --------------------------------------------
-
                 clearPendingNotificationInternal()
 
-
                 promise.resolve(result)
-
             }
-
-
         } catch (error: Exception) {
-
             Log.e(
                 TAG,
                 "Error getting pending Customer notification",
                 error
             )
-
 
             promise.reject(
                 "PENDING_NOTIFICATION_ERROR",
@@ -124,94 +86,83 @@ class NotificationBadgeModule(
         }
     }
 
-
     // ========================================================
     // CANCEL NOTIFICATIONS FOR ONE TICKET
     // ========================================================
 
-    @ReactMethod
-    fun cancelTicketNotifications(
-        ticketId: String
-    ) {
+    
+@ReactMethod
+fun cancelTicketNotifications(
+    ticketId: String,
+    promise: Promise
+) {
+    try {
+        val manager =
+            reactApplicationContext.getSystemService(
+                Context.NOTIFICATION_SERVICE
+            ) as NotificationManager
 
-        try {
+        val result = Arguments.createMap()
+        val activeTags = Arguments.createArray()
+        var cancelledCount = 0
+        var activeCount = 0
 
-            val context =
-                reactApplicationContext
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val active = manager.activeNotifications
+            activeCount = active.size
 
+            active.forEach { notification ->
+                val tag = notification.tag ?: ""
 
-            val notificationManager =
-                context.getSystemService(
-                    Context.NOTIFICATION_SERVICE
-                ) as NotificationManager
-
-
-            if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.M
-            ) {
-
-                val activeNotifications =
-                    notificationManager.activeNotifications
-
-
-                activeNotifications.forEach {
-                    notification ->
-
-
-                    val tag =
-                        notification.tag ?: ""
-
-
-                    if (
-                        tag.startsWith(
-                            "FCM-Ticket:$ticketId:"
-                        )
-                    ) {
-
-                        notificationManager.cancel(
-                            notification.tag,
-                            notification.id
-                        )
-
-
-                        Log.d(
-                            TAG,
-                            "Cancelled Customer notification for ticket: $ticketId"
-                        )
-                    }
-
-                }
-
-            }
-
-
-            // --------------------------------------------
-            // Also clear matching pending notification
-            // --------------------------------------------
-
-            synchronized(lock) {
+                activeTags.pushString(
+                    "tag=$tag, id=${notification.id}"
+                )
 
                 if (
-                    pendingTicketId ==
-                    ticketId
+                    tag.startsWith(
+                        "FCM-Ticket:$ticketId:"
+                    )
                 ) {
-
-                    clearPendingNotificationInternal()
+                    manager.cancel(
+                        notification.tag,
+                        notification.id
+                    )
+                    cancelledCount++
                 }
-
             }
-
-
-        } catch (error: Exception) {
-
-            Log.e(
-                TAG,
-                "Error cancelling Customer ticket notifications",
-                error
-            )
         }
+
+        synchronized(lock) {
+            if (pendingTicketId == ticketId) {
+                clearPendingNotificationInternal()
+            }
+        }
+
+        result.putString("ticketId", ticketId)
+        result.putInt("activeCount", activeCount)
+        result.putInt("cancelledCount", cancelledCount)
+        result.putArray("activeTags", activeTags)
+
+        Log.d(
+            TAG,
+            "Ticket=$ticketId, active=$activeCount, cancelled=$cancelledCount"
+        )
+
+        promise.resolve(result)
+
+    } catch (error: Exception) {
+        Log.e(
+            TAG,
+            "Ticket notification cancellation failed",
+            error
+        )
+
+        promise.reject(
+            "CANCEL_TICKET_NOTIFICATION_ERROR",
+            error
+        )
     }
+}
 
 
     // ========================================================
@@ -219,17 +170,12 @@ class NotificationBadgeModule(
     // ========================================================
 
     @ReactMethod
-    fun setBadge(
-        count: Int
-    ) {
+    fun setBadge(count: Int) {
 
-        /*
-         * We intentionally do not use
-         * NotificationCompat.Builder.setNumber().
-         *
-         * Some Android launchers interpret setNumber()
-         * differently and can show misleading badge counts.
-         */
+        // We intentionally do not use
+        // NotificationCompat.Builder.setNumber().
+        // Some Android launchers interpret setNumber()
+        // differently and show misleading badge counts.
 
         Log.d(
             TAG,
@@ -237,76 +183,59 @@ class NotificationBadgeModule(
         )
     }
 
-
     // ========================================================
     // CLEAR BADGE / FCM TICKET NOTIFICATIONS
     // ========================================================
 
     @ReactMethod
     fun clearBadge() {
-
         try {
-
-            val context =
-                reactApplicationContext
-
+            val context = reactApplicationContext
 
             val notificationManager =
                 context.getSystemService(
                     Context.NOTIFICATION_SERVICE
                 ) as NotificationManager
 
-
-            if (
-                Build.VERSION.SDK_INT >=
-                Build.VERSION_CODES.M
-            ) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 
                 val activeNotifications =
                     notificationManager.activeNotifications
 
+                Log.d(
+                    TAG,
+                    "Clear badge requested. Active notifications: ${activeNotifications.size}"
+                )
 
-                activeNotifications.forEach {
-                    notification ->
+                activeNotifications.forEach { notification ->
 
+                    val tag = notification.tag ?: ""
 
-                    val tag =
-                        notification.tag ?: ""
-
-
-                    if (
-                        tag.startsWith(
-                            "FCM-Ticket:"
-                        )
-                    ) {
+                    if (tag.startsWith("FCM-Ticket:")) {
 
                         notificationManager.cancel(
                             notification.tag,
                             notification.id
                         )
 
+                        Log.d(
+                            TAG,
+                            "Cleared notification tag: $tag"
+                        )
                     }
-
                 }
-
             }
-
 
             synchronized(lock) {
-
                 clearPendingNotificationInternal()
-
             }
-
 
             Log.d(
                 TAG,
                 "Customer notification badge cleared"
             )
 
-
         } catch (error: Exception) {
-
             Log.e(
                 TAG,
                 "Error clearing Customer notifications",
@@ -315,41 +244,28 @@ class NotificationBadgeModule(
         }
     }
 
-
     companion object {
 
-        private const val TAG =
-            "NotificationBadge"
+        private const val TAG = "NotificationBadge"
 
-
-        private val lock =
-            Any()
-
+        private val lock = Any()
 
         // ====================================================
         // PENDING NOTIFICATION DATA
         // ====================================================
 
-        private var pendingTicketId:
-            String? = null
+        private var pendingTicketId: String? = null
 
+        private var pendingTicketSubject: String? = null
 
-        private var pendingTicketSubject:
-            String? = null
-
-
-        private var pendingThreadId:
-            String? = null
-
+        private var pendingThreadId: String? = null
 
         // ====================================================
         // REACT CONTEXT
         // ====================================================
 
         private var reactContextReference:
-            WeakReference<ReactApplicationContext>? =
-            null
-
+            WeakReference<ReactApplicationContext>? = null
 
         // ====================================================
         // SAVE PENDING NOTIFICATION
@@ -361,99 +277,57 @@ class NotificationBadgeModule(
             threadId: String?
         ) {
 
-            if (
-                ticketId.isNullOrEmpty()
-            ) {
-
+            if (ticketId.isNullOrEmpty()) {
                 Log.d(
                     TAG,
                     "Customer pending notification ignored: ticketId missing"
                 )
-
                 return
             }
 
-
             synchronized(lock) {
-
-                pendingTicketId =
-                    ticketId
-
-
-                pendingTicketSubject =
-                    ticketSubject ?: ""
-
-
-                pendingThreadId =
-                    threadId ?: ""
-
+                pendingTicketId = ticketId
+                pendingTicketSubject = ticketSubject ?: ""
+                pendingThreadId = threadId ?: ""
             }
-
 
             Log.d(
                 TAG,
                 "Saved pending Customer notification for ticket: $ticketId"
             )
 
-
-            // =================================================
-            // IF REACT NATIVE IS ALREADY ACTIVE,
-            // SEND EVENT IMMEDIATELY
-            // =================================================
-
+            // IF REACT NATIVE IS ACTIVE, SEND EVENT
             emitNotificationClicked()
         }
-
 
         // ====================================================
         // EMIT NOTIFICATION CLICK TO JAVASCRIPT
         // ====================================================
 
         private fun emitNotificationClicked() {
-
             try {
-
                 val reactContext =
-                    reactContextReference?.get()
-                        ?: return
+                    reactContextReference?.get() ?: return
 
-
-                if (
-                    !reactContext.hasActiveCatalystInstance()
-                ) {
-
+                if (!reactContext.hasActiveCatalystInstance()) {
                     Log.d(
                         TAG,
                         "React context not active yet - Customer notification kept pending"
                     )
-
                     return
                 }
 
+                val ticketId = synchronized(lock) {
+                    pendingTicketId
+                }
 
-                val ticketId =
-                    synchronized(lock) {
-                        pendingTicketId
-                    }
-
-
-                if (
-                    ticketId.isNullOrEmpty()
-                ) {
-
+                if (ticketId.isNullOrEmpty()) {
                     return
                 }
 
+                val params = Arguments.createMap()
 
-                val params =
-                    Arguments.createMap()
-
-
-                params.putString(
-                    "ticketId",
-                    ticketId
-                )
-
+                params.putString("ticketId", ticketId)
 
                 params.putString(
                     "ticketSubject",
@@ -462,7 +336,6 @@ class NotificationBadgeModule(
                     }
                 )
 
-
                 params.putString(
                     "threadId",
                     synchronized(lock) {
@@ -470,12 +343,10 @@ class NotificationBadgeModule(
                     }
                 )
 
-
                 params.putBoolean(
                     "fromNotification",
                     true
                 )
-
 
                 reactContext
                     .getJSModule(
@@ -487,27 +358,16 @@ class NotificationBadgeModule(
                         params
                     )
 
-
                 Log.d(
                     TAG,
                     "Customer notificationClicked event emitted"
                 )
 
-
-                /*
-                 * Event React Native ko successfully send
-                 * ho gaya, isliye pending data clear kar do.
-                 */
-
                 synchronized(lock) {
-
                     clearPendingNotificationInternal()
-
                 }
 
-
             } catch (error: Exception) {
-
                 Log.e(
                     TAG,
                     "Error emitting Customer notification click event",
@@ -516,23 +376,14 @@ class NotificationBadgeModule(
             }
         }
 
-
         // ====================================================
         // CLEAR PENDING DATA
         // ====================================================
 
         private fun clearPendingNotificationInternal() {
-
-            pendingTicketId =
-                null
-
-
-            pendingTicketSubject =
-                null
-
-
-            pendingThreadId =
-                null
+            pendingTicketId = null
+            pendingTicketSubject = null
+            pendingThreadId = null
         }
     }
 }
