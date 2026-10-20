@@ -728,6 +728,13 @@ app.post("/hubspot-webhook", async (req, res) => {
     const threadId = event?.objectId;
     const webhookMessageId = event?.messageId;
 
+    console.log("WEBHOOK DEBUG:", {
+      threadId,
+      webhookMessageId,
+      eventType: event?.subscriptionType,
+      event: JSON.stringify(event),
+    });
+
     if (!threadId || !webhookMessageId) {
       console.log("Webhook threadId or messageId missing");
       return res.sendStatus(200);
