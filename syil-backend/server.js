@@ -785,6 +785,15 @@ app.post("/hubspot-webhook", async (req, res) => {
       senderEmail: matchingMessage?.senders?.[0]?.deliveryIdentifier?.value,
     });
 
+    if (matchingMessage?.direction === "INCOMING") {
+      console.log("SUPPORT INCOMING DEBUG:", {
+        threadId: String(threadId),
+        messageId: String(webhookMessageId),
+        senderEmail:
+          matchingMessage?.senders?.[0]?.deliveryIdentifier?.value,
+      });
+    }
+
 
     const latestMessage = messages.find(
       (message) =>
