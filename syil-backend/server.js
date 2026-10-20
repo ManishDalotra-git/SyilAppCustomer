@@ -714,6 +714,7 @@ app.post('/remove-fcm-token', async (req, res) => {
 
 
 
+
 app.post("/hubspot-webhook", async (req, res) => {
   console.log("========== CUSTOMER WEBHOOK RECEIVED ==========");
 
@@ -886,7 +887,11 @@ app.post("/hubspot-webhook", async (req, res) => {
                 .trim()
                 .toLowerCase();
 
-              await new Promise((resolve) => setTimeout(resolve, 1500));
+              // Short delay to reduce HubSpot search rate limits
+              await new Promise((resolve) =>
+                setTimeout(resolve, 1500)
+              );
+
               // STEP 5: Find owner contact and FCM token
               const contactResponse = await fetch(
                 "https://api.hubapi.com/crm/v3/objects/contacts/search",
@@ -922,21 +927,126 @@ app.post("/hubspot-webhook", async (req, res) => {
                 const supportContact =
                   contactData.results?.[0];
 
-                console.log(
-                  "SUPPORT OWNER CONTACT DEBUG:",
-                  {
-                    ticketId: supportTicket.id,
-                    ownerId: assignedOwnerId,
-                    ownerEmail,
-                    contactFound: !!supportContact,
-                    isSupportMember:
-                      supportContact?.properties
-                        ?.app_support_team_member,
-                    hasFcmToken:
-                      !!supportContact?.properties
-                        ?.fcm_token,
+                const supportRole = String(
+                  supportContact?.properties
+                    ?.app_support_team_member || ""
+                )
+                  .trim()
+                  .toLowerCase();
+
+                const supportFcmToken =
+                  supportContact?.properties?.fcm_token;
+
+                console.log("SUPPORT OWNER CONTACT DEBUG:", {
+                  ticketId: supportTicket.id,
+                  ownerId: assignedOwnerId,
+                  ownerEmail,
+                  contactFound: !!supportContact,
+                  isSupportMember:
+                    supportContact?.properties
+                      ?.app_support_team_member,
+                  hasFcmToken: !!supportFcmToken,
+                });
+
+                // Verify assigned owner is a support member
+                if (
+                  supportContact &&
+                  ["yes", "true", "1"].includes(supportRole)
+                ) {
+                  const supportTicketId =
+                    String(supportTicket.id);
+
+                  const currentSupportUnread = Math.max(
+                    0,
+                    Number(
+                      supportTicket.properties
+                        ?.support_unread_count || 0
+                    ) || 0
+                  );
+
+                  const newSupportUnread =
+                    currentSupportUnread + 1;
+
+                  // STEP 6: Update support unread count
+                  const supportUnreadResponse = await fetch(
+                    `https://api.hubapi.com/crm/v3/objects/tickets/${supportTicketId}`,
+                    {
+                      method: "PATCH",
+                      headers,
+                      body: JSON.stringify({
+                        properties: {
+                          support_unread_count:
+                            String(newSupportUnread),
+                        },
+                      }),
+                    }
+                  );
+
+                  if (!supportUnreadResponse.ok) {
+                    console.error(
+                      "SUPPORT UNREAD UPDATE ERROR:",
+                      await supportUnreadResponse.text()
+                    );
+                  } else {
+                    console.log("SUPPORT UNREAD UPDATED:", {
+                      ticketId: supportTicketId,
+                      previousCount: currentSupportUnread,
+                      newCount: newSupportUnread,
+                    });
+
+                    // STEP 7: Send Firebase notification
+                    if (supportFcmToken) {
+                      try {
+                        const notificationBody = String(
+                          matchingMessage.text ||
+                            "You have a new customer message."
+                        );
+
+                        const firebaseResponse =
+                          await getMessaging().send({
+                            token: String(supportFcmToken),
+
+                            data: {
+                              notificationTitle:
+                                "SYIL Customer Support",
+                              notificationBody,
+                              ticketId: supportTicketId,
+                              ticketSubject: String(
+                                supportTicket.properties
+                                  ?.subject || "Ticket Details"
+                              ),
+                              threadId: String(threadId),
+                              messageId:
+                                String(webhookMessageId),
+                            },
+
+                            android: {
+                              priority: "high",
+                            },
+                          });
+
+                        console.log("SUPPORT PUSH SENT:", {
+                          ticketId: supportTicketId,
+                          ownerEmail,
+                          firebaseResponse,
+                        });
+                      } catch (firebaseError) {
+                        console.error(
+                          "SUPPORT FIREBASE PUSH ERROR:",
+                          firebaseError
+                        );
+                      }
+                    } else {
+                      console.log(
+                        "SUPPORT PUSH SKIPPED: FCM token missing"
+                      );
+                    }
                   }
-                );
+                } else {
+                  console.log(
+                    "SUPPORT PUSH SKIPPED: Contact is not a support member"
+                  );
+                }
               } else {
                 console.error(
                   "SUPPORT CONTACT SEARCH ERROR:",
@@ -964,7 +1074,6 @@ app.post("/hubspot-webhook", async (req, res) => {
 
     // =====================================================
     // EXISTING CUSTOMER NOTIFICATION LOGIC
-    // DO NOT CHANGE
     // =====================================================
 
     const latestMessage = messages.find(
@@ -981,7 +1090,7 @@ app.post("/hubspot-webhook", async (req, res) => {
 
     console.log("Customer message ID:", latestMessage.id);
 
-    // STEP 4: Get customer email
+    // STEP 8: Get customer email
     const recipientEmail =
       latestMessage?.recipients?.[0]?.deliveryIdentifier?.value;
 
@@ -994,7 +1103,7 @@ app.post("/hubspot-webhook", async (req, res) => {
       .trim()
       .toLowerCase();
 
-    // STEP 5: Find customer contact
+    // STEP 9: Find customer contact
     const contactSearchResponse = await fetch(
       "https://api.hubapi.com/crm/v3/objects/contacts/search",
       {
@@ -1018,10 +1127,14 @@ app.post("/hubspot-webhook", async (req, res) => {
       }
     );
 
-    const contactData = await contactSearchResponse.json();
+    const contactData =
+      await contactSearchResponse.json();
 
     if (!contactSearchResponse.ok) {
-      console.error("Contact search failed:", contactData);
+      console.error(
+        "Contact search failed:",
+        contactData
+      );
       return res.sendStatus(200);
     }
 
@@ -1034,7 +1147,7 @@ app.post("/hubspot-webhook", async (req, res) => {
 
     const fcmToken = contact.properties?.fcm_token;
 
-    // STEP 6: Find ticket using thread ID
+    // STEP 10: Find ticket using thread ID
     const ticketSearchResponse = await fetch(
       "https://api.hubapi.com/crm/v3/objects/tickets/search",
       {
@@ -1075,7 +1188,7 @@ app.post("/hubspot-webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // STEP 7: Customer Portal tickets only
+    // STEP 11: Customer Portal tickets only
     const matchingTickets = Array.isArray(
       ticketSearchData.results
     )
@@ -1107,7 +1220,7 @@ app.post("/hubspot-webhook", async (req, res) => {
       ticket.properties?.subject || "Ticket Details"
     );
 
-    // STEP 8: Increase customer unread count
+    // STEP 12: Increase customer unread count
     const currentUnreadCount = Math.max(
       0,
       Number(
@@ -1115,7 +1228,8 @@ app.post("/hubspot-webhook", async (req, res) => {
       ) || 0
     );
 
-    const newUnreadCount = currentUnreadCount + 1;
+    const newUnreadCount =
+      currentUnreadCount + 1;
 
     const unreadUpdateResponse = await fetch(
       `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}`,
@@ -1142,21 +1256,20 @@ app.post("/hubspot-webhook", async (req, res) => {
       );
     }
 
-    // STEP 9: Prepare notification
+    // STEP 13: Prepare notification
     const notificationBody = String(
       latestMessage.text ||
         "You have a new support message."
     );
 
-    // STEP 10: Send Firebase notification
+    // STEP 14: Send Firebase notification
     if (fcmToken) {
       try {
         const firebaseResponse =
           await getMessaging().send({
             token: fcmToken,
 
-            // Data-only message: Android native service
-            // creates ticket-specific notification
+            // Data-only Android notification
             data: {
               notificationTitle: "SYIL Support",
               notificationBody: notificationBody,
@@ -1198,6 +1311,7 @@ app.post("/hubspot-webhook", async (req, res) => {
     return res.sendStatus(200);
   }
 });
+
 
 
 
