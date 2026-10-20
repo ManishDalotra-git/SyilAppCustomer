@@ -103,7 +103,7 @@ const ViewTicket = ({ navigation }) => {
                     //https://syilappcustomer.onrender.com
                     //http://192.168.0.94:3000
 
-                    const response = await fetch('http://192.168.0.94:3000/get_tickets', {
+                    const response = await fetch('https://syilappcustomer.onrender.com/get_tickets', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
